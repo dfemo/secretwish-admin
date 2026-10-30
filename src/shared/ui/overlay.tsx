@@ -27,6 +27,12 @@ export function Modal({
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // Callers usually pass an inline onClose; keep the latest in a ref so typing (a re-render) doesn't
+  // re-run the effect below, which would move focus back to the first field on every keystroke.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -35,7 +41,7 @@ export function Modal({
     const focusables = () => Array.from(node?.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])") ?? []).filter((el) => !el.hasAttribute("disabled"));
     (focusables().find((el) => el.tagName !== "BUTTON") ?? focusables()[0])?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
       if (e.key === "Tab") {
         const f = focusables();
         if (f.length === 0) return;
@@ -55,7 +61,7 @@ export function Modal({
       document.body.style.overflow = "";
       previous?.focus();
     };
-  }, [open, onClose]);
+  }, [open, mounted]);
 
   if (!open || !mounted) return null;
   const w = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];

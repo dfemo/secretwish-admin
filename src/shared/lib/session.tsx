@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { ArrowLeft, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import { API_URL, api, setAccessTokenProvider, setDemoUser, useApi } from "./api";
 import { money, type Currency } from "./format";
@@ -73,6 +73,14 @@ function write(key: string, value: string | null) {
 /** The SecretWish sign-in service (the API, or auth.secretwish.com once a custom domain is set up). */
 export const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? API_URL;
 const CALLBACK_PATH = "/auth/callback";
+
+/** The public website and the other SecretWish apps, so the sign-in screen can send people elsewhere. */
+export const WEBSITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? "http://localhost:3000";
+const appLinks: { app: AppName; label: string; href: string }[] = [
+  { app: "sender", label: "Send a gift", href: process.env.NEXT_PUBLIC_SENDER_URL ?? "http://localhost:3002" },
+  { app: "recipient", label: "My wishlists", href: process.env.NEXT_PUBLIC_RECIPIENT_URL ?? "http://localhost:3003" },
+  { app: "vendor", label: "Vendor portal", href: process.env.NEXT_PUBLIC_VENDOR_URL ?? "http://localhost:3004" },
+];
 
 let manager: UserManager | null = null;
 /** One OpenID Connect client per app; tokens are refreshed in the background with the refresh token. */
@@ -326,6 +334,21 @@ function OpenYourStore({ vendor, onSubmitted }: { vendor: VendorSummary | null; 
 function SignInChooser({ app, intro, demoEnabled, onPick }: { app: AppName; intro: ReactNode; demoEnabled: boolean; onPick: (p: Persona) => void }) {
   return (
     <main className="min-h-screen bg-plum-950 px-4 py-10 text-ivory-50">
+      <nav aria-label="Other SecretWish apps" className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[13px]">
+        <a href={WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-300 hover:text-ivory-50">
+          <ArrowLeft className="size-4" aria-hidden /> Back to SecretWish home
+        </a>
+        {app !== "admin" && (
+          <span className="flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-plum-300">Switch to</span>
+            {appLinks.filter((l) => l.app !== app).map((l) => (
+              <a key={l.app} href={l.href} className="rounded-full border border-plum-700 px-3 py-1 font-semibold text-ivory-50 hover:border-gold-400 hover:text-gold-400">
+                {l.label}
+              </a>
+            ))}
+          </span>
+        )}
+      </nav>
       <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-[1.1fr_1fr]">
         <div>
           <Logo suffix={app === "admin" ? "Operations" : app === "vendor" ? "Vendor" : undefined} />

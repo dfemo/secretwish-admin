@@ -5,8 +5,9 @@ import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { Button, Card, CardHeader, ErrorState, Field, Input, Notice, PageHeader, PageSkeleton, Switch } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
+import { EmailDeliverySettings } from "./email-settings";
 
-type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean };
+type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number };
 type Data = { settings: Settings; permissions: Record<string, string>[] };
 
 export default function SettingsPage() {
@@ -25,6 +26,7 @@ export default function SettingsPage() {
     hold: form.payoutHoldDays < 0 || form.payoutHoldDays > 30 ? "Between 0 and 30 days." : null,
     fx: form.fxRateNgn <= 0 ? "Must be positive." : null,
     attempts: form.verificationMaxAttempts < 1 || form.verificationMaxAttempts > 10 ? "Between 1 and 10." : null,
+    cashFee: form.cashGiftFeeRate < 0 || form.cashGiftFeeRate > 0.3 ? "Between 0% and 30%." : null,
   };
   const invalid = Object.values(errs).some(Boolean);
 
@@ -38,6 +40,9 @@ export default function SettingsPage() {
           <fieldset disabled={!editable} className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Commission rate (%)" error={errs.commission} hint="Applied to the product subtotal.">
               {(id, d) => <Input id={id} aria-describedby={d} type="number" step="0.5" value={+(form.commissionRate * 100).toFixed(2)} onChange={(e) => setForm({ ...form, commissionRate: Number(e.target.value) / 100 })} />}
+            </Field>
+            <Field label="Cash gift fee (%)" error={errs.cashFee} hint="Paid by the sender on top of the cash amount.">
+              {(id, d) => <Input id={id} aria-describedby={d} type="number" step="0.5" value={+(form.cashGiftFeeRate * 100).toFixed(2)} onChange={(e) => setForm({ ...form, cashGiftFeeRate: Number(e.target.value) / 100 })} />}
             </Field>
             <Field label="Payout hold after delivery (days)" error={errs.hold}>
               {(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.payoutHoldDays} onChange={num("payoutHoldDays")} />}
@@ -68,6 +73,7 @@ export default function SettingsPage() {
           )}
         </Card>
       </div>
+      <EmailDeliverySettings />
       <Card className="mt-6">
         <CardHeader title="Role permissions" description="Least-privilege access enforced by the API" />
         <div className="overflow-x-auto px-2 pb-3">
