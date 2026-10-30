@@ -3,11 +3,11 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BadgeCheck, Store } from "lucide-react";
-import { useApi } from "@/shared/lib/api";
+import { useApi, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date, pct } from "@/shared/lib/format";
 import { Avatar, Card, EmptyState, ErrorState, PageHeader, SearchInput, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
-import { DataTable, type Column } from "@/shared/ui/data";
+import { DataTable, type Column, PagedFooter } from "@/shared/ui/data";
 
 type Vendor = { id: string; name: string; contactName: string; city: string; primaryCategory: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; onTimeRate: number; appliedAt: string };
 type Row = { vendor: Vendor; orders: number; gmv: number; products: number; counts: Record<string, number> };
@@ -16,11 +16,9 @@ function VendorsInner() {
   const params = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState(params.get("status") ?? "");
-  const [search, setSearch] = useState("");
-  const { data, error, loading, reload } = useApi<Row[]>(`/admin/vendors?status=${status}&search=${encodeURIComponent(search)}`);
-  const { data: all } = useApi<Row[]>(`/admin/vendors`);
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Row>("/admin/vendors", { status }, 25);
   const { fmt } = useSession();
-  const counts = all?.[0]?.counts ?? {};
+  const counts = paged?.counts ?? {};
 
   const columns: Column<Row>[] = [
     {
@@ -80,6 +78,7 @@ function VendorsInner() {
         {loading && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
         {data && (
+          <>
           <DataTable
             caption="Vendors"
             columns={columns}
@@ -89,6 +88,8 @@ function VendorsInner() {
             rowLabel={(r) => `Open ${r.vendor.name}`}
             empty={<EmptyState icon={Store} title="No vendors here" />}
           />
+          <PagedFooter data={paged} onPage={setPage} />
+          </>
         )}
       </Card>
     </>

@@ -1,13 +1,14 @@
 "use client";
 
+import { PagedFooter } from "@/shared/ui/data";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LifeBuoy, Lock, Send } from "lucide-react";
-import { api, useApi, useMutation } from "@/shared/lib/api";
+import { api, useApi, useMutation, type Paged } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, humanize, timeAgo } from "@/shared/lib/format";
-import { Badge, Button, Card, cx, EmptyState, ErrorState, KpiCard, PageHeader, Select, Spinner, StatusBadge, Switch, Tabs, Textarea } from "@/shared/ui/primitives";
+import { Badge, Button, Card, cx, EmptyState, ErrorState, KpiCard, PageHeader, Select, Spinner, StatusBadge, Switch, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
 import { Modal, useToast } from "@/shared/ui/overlay";
 import { WebsiteEnquiries } from "./enquiries";
 
@@ -16,7 +17,7 @@ type Ticket = {
   raisedBy: string; raisedByRole: string; order?: { id: string; reference: string; status: string; deliveryCity: string };
   notes?: { id: string; author: string; body: string; internal: boolean; at: string }[];
 };
-type Data = { summary: { open: number; urgent: number; lateDeliveries: number; missingGifts: number; refundRequests: number; privacy: number; disputes: number; avgResolutionHours: number }; tickets: Ticket[] };
+type Data = { summary: { open: number; urgent: number; lateDeliveries: number; missingGifts: number; refundRequests: number; privacy: number; disputes: number; avgResolutionHours: number }; tickets: Paged<Ticket> };
 
 const agents = ["Amaka Eze", "Tolu Bakare"];
 const priorityTone: Record<string, "danger" | "warning" | "plum" | "neutral"> = { Urgent: "danger", High: "warning", Normal: "plum", Low: "neutral" };
@@ -26,7 +27,15 @@ function SupportInner() {
   const [status, setStatus] = useState("active");
   const [category, setCategory] = useState("");
   const [assignee, setAssignee] = useState("");
-  const { data, error, loading, reload } = useApi<Data>(`/admin/tickets?status=${status}&category=${category}&assignee=${encodeURIComponent(assignee)}`);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+  useEffect(() => setPage(1), [status, category, assignee, debounced]);
+  const { data, error, loading, reload } = useApi<Data>(`/admin/tickets?status=${status}&category=${category}&assignee=${encodeURIComponent(assignee)}&search=${encodeURIComponent(debounced)}&page=${page}&pageSize=20`);
   const [openId, setOpenId] = useState<string | null>(params.get("ticket"));
   const { persona } = useSession();
 
@@ -63,9 +72,10 @@ function SupportInner() {
         </div>
         {loading && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
-        {data?.tickets.length === 0 && <EmptyState icon={LifeBuoy} title="Inbox zero" description="No tickets match these filters." />}
+        <div className="border-b border-ink-100 p-4"><SearchInput value={search} onChange={setSearch} label="Search tickets" placeholder="Reference or subject" className="sm:w-80" /></div>
+        {data?.tickets.items.length === 0 && <EmptyState icon={LifeBuoy} title="Inbox zero" description="No tickets match these filters." />}
         <ul className="divide-y divide-ink-100">
-          {data?.tickets.map((t) => (
+          {data?.tickets.items.map((t) => (
             <li key={t.id}>
               <button type="button" onClick={() => setOpenId(t.id)} className="flex w-full flex-wrap items-center gap-3 px-5 py-3.5 text-left hover:bg-plum-50/40">
                 <Badge tone={priorityTone[t.priority]}>{t.priority}</Badge>
@@ -82,6 +92,7 @@ function SupportInner() {
             </li>
           ))}
         </ul>
+        <PagedFooter data={data?.tickets} onPage={setPage} />
       </Card>
       <WebsiteEnquiries />
       {openId && <TicketModal id={openId} onClose={() => setOpenId(null)} />}

@@ -2,22 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import {
-  BarChart3,
-  Boxes,
-  CreditCard,
-  FileClock,
-  Gift,
-  HandCoins,
-  LayoutDashboard,
-  LifeBuoy,
-  Package,
-  RotateCcw,
-  Settings,
-  ShieldCheck,
-  Store,
-  Users,
-} from "lucide-react";
+import { BarChart3, Boxes, CreditCard, FileClock, Gift, HandCoins, LayoutDashboard, LifeBuoy, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
 import { SessionProvider, useSession } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
 import { ToastProvider } from "@/shared/ui/overlay";
@@ -49,6 +34,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/privacy", label: "Privacy & Security", icon: ShieldCheck },
       { href: "/audit", label: "Audit Logs", icon: FileClock },
+      { href: "/team", label: "Team", icon: UserCog },
       { href: "/settings", label: "Settings & Permissions", icon: Settings },
     ],
   },
@@ -76,7 +62,7 @@ export default function Providers({ children }: { children: ReactNode }) {
             <h1 className="font-display text-4xl leading-tight font-semibold md:text-5xl">
               The control room for <span className="text-gold-400">discreet gifting</span>.
             </h1>
-            <p className="mt-4 max-w-md text-plum-200">Orders, vendors, refunds, payouts and support — with privacy controls that change with your role. Try each persona to see least-privilege access in action.</p>
+            <p className="mt-4 max-w-md text-plum-200">Orders, vendors, refunds, payouts and support — with privacy controls that change with your role. Sign in with your SecretWish account; access follows your team role.</p>
           </>
         }
       >

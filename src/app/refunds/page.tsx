@@ -1,13 +1,14 @@
 "use client";
 
+import { PagedFooter } from "@/shared/ui/data";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { RotateCcw, UserPlus } from "lucide-react";
-import { api, useApi, useMutation } from "@/shared/lib/api";
+import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
-import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Notice, PageHeader, Select, Spinner, StatusBadge, Tabs, Textarea } from "@/shared/ui/primitives";
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Notice, PageHeader, Select, Spinner, StatusBadge, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
 import { Modal, useToast } from "@/shared/ui/overlay";
 
 type Case = {
@@ -22,7 +23,7 @@ function RefundsInner() {
   const params = useSearchParams();
   const [type, setType] = useState(params.get("type") ?? "");
   const [status, setStatus] = useState("open");
-  const { data, error, loading, reload } = useApi<Case[]>(`/admin/cases?type=${type}&status=${status}`);
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Case>("/admin/cases", { type, status }, 20);
   const { fmt, persona } = useSession();
   const toast = useToast();
   const [selected, setSelected] = useState<Case | null>(null);
@@ -62,7 +63,8 @@ function RefundsInner() {
         </div>
         {loading && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
-        {data?.length === 0 && <EmptyState icon={RotateCcw} title="No cases here" description="The queue is clear." />}
+        <div className="border-b border-ink-100 p-4"><SearchInput value={search} onChange={setSearch} label="Search cases" placeholder="Case or order reference" className="sm:w-80" /></div>
+        {data?.length === 0 && <EmptyState icon={RotateCcw} title={search ? "No cases match" : "No cases here"} description={search ? undefined : "The queue is clear."} />}
         <ul className="divide-y divide-ink-100">
           {data?.map((c) => (
             <li key={c.id}>
@@ -86,6 +88,7 @@ function RefundsInner() {
             </li>
           ))}
         </ul>
+        <PagedFooter data={paged} onPage={setPage} />
       </Card>
 
       <Modal

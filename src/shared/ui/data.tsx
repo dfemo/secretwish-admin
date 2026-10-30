@@ -49,7 +49,7 @@ export function DataTable<T>({
           <thead>
             <tr className="border-b border-ink-100 text-xs text-ink-500">
               {columns.map((c) => {
-                const active = sort?.key === c.sortKey;
+                const active = !!sort && !!c.sortKey && sort.key === c.sortKey;
                 return (
                   <th key={c.key} scope="col" className={cx("px-4 py-3 font-semibold whitespace-nowrap first:pl-5 last:pr-5", c.align === "right" && "text-right", c.className)} aria-sort={active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}>
                     {c.sortKey && onSort ? (
@@ -118,28 +118,36 @@ export function DataTable<T>({
   );
 }
 
-export function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
+/** Prev/next pager for server-paged lists. Totals of 10,000 or more show as "10,000+" (the server stops counting there). */
+export function Pagination({ page, pageSize, total, totalCapped, onPage, className }: { page: number; pageSize: number; total: number; totalCapped?: boolean; onPage: (p: number) => void; className?: string }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
+  const last = !totalCapped && page >= pages;
+  if (total <= pageSize && page === 1 && !totalCapped) return null;
   return (
-    <nav className="flex items-center justify-between gap-3 border-t border-ink-100 px-5 py-3 text-xs text-ink-500" aria-label="Pagination">
+    <nav className={`flex items-center justify-between gap-3 border-t border-ink-100 px-4 py-3 text-xs text-ink-500 sm:px-5 ${className ?? ""}`} aria-label="Pagination">
       <span>
-        Showing <b className="text-ink-900">{from}</b>–<b className="text-ink-900">{to}</b> of <b className="text-ink-900">{total}</b>
+        <b className="text-ink-900">{from.toLocaleString()}</b>–<b className="text-ink-900">{to.toLocaleString()}</b> of <b className="text-ink-900">{total.toLocaleString()}{totalCapped ? "+" : ""}</b>
       </span>
       <div className="flex items-center gap-1">
-        <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-lg p-1.5 hover:bg-ink-100 disabled:opacity-40" aria-label="Previous page">
-          <ChevronLeft className="size-4" />
+        <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className="grid size-10 place-items-center rounded-xl hover:bg-ink-100 disabled:opacity-40" aria-label="Previous page">
+          <ChevronLeft className="size-5" />
         </button>
-        <span className="px-2 font-semibold text-ink-700">
-          {page} / {pages}
+        <span className="px-1 font-semibold text-ink-700">
+          {page.toLocaleString()} / {totalCapped ? `${pages.toLocaleString()}+` : pages.toLocaleString()}
         </span>
-        <button type="button" disabled={page >= pages} onClick={() => onPage(page + 1)} className="rounded-lg p-1.5 hover:bg-ink-100 disabled:opacity-40" aria-label="Next page">
-          <ChevronRight className="size-4" />
+        <button type="button" disabled={last} onClick={() => onPage(page + 1)} className="grid size-10 place-items-center rounded-xl hover:bg-ink-100 disabled:opacity-40" aria-label="Next page">
+          <ChevronRight className="size-5" />
         </button>
       </div>
     </nav>
   );
+}
+
+/** Pagination for a usePagedApi result. */
+export function PagedFooter({ data, onPage, className }: { data: { page: number; pageSize: number; total: number; totalCapped?: boolean } | undefined; onPage: (p: number) => void; className?: string }) {
+  return data ? <Pagination page={data.page} pageSize={data.pageSize} total={data.total} totalCapped={data.totalCapped} onPage={(p) => { onPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={className} /> : null;
 }
 
 export type TimelineItem = { id: string; at: string; title: string; detail?: string; actor?: string; internal?: boolean; done?: boolean };

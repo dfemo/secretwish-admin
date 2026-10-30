@@ -16,7 +16,7 @@ type Row = {
   product: { productName: string; emoji: string; quantity: number }; total: number; status: string; paymentStatus: string;
   fulfilmentStatus: string; deliveryStatus: string; refundStatus: string; fraudHold: boolean; viaWishlist: boolean;
 };
-type Page = { items: Row[]; total: number; page: number; pageSize: number };
+type Page = { items: Row[]; total: number; page: number; pageSize: number; totalCapped?: boolean };
 
 function OrdersInner() {
   const params = useSearchParams();
@@ -172,7 +172,7 @@ function OrdersInner() {
               onSort={(k) => setSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}
               empty={<EmptyState icon={PackageSearch} title="No orders match" description="Try a different search or clear the filters." />}
             />
-            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />
+            <Pagination page={data.page} pageSize={data.pageSize} total={data.total} totalCapped={data.totalCapped} onPage={setPage} />
           </>
         )}
       </Card>

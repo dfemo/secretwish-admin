@@ -1,23 +1,25 @@
 "use client";
 
 import { CheckCircle2, Globe } from "lucide-react";
-import { api, useApi, useMutation } from "@/shared/lib/api";
+import { api, useMutation, usePagedApi } from "@/shared/lib/api";
+import { PagedFooter } from "@/shared/ui/data";
 import { timeAgo } from "@/shared/lib/format";
-import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, Spinner } from "@/shared/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Spinner } from "@/shared/ui/primitives";
 
 type Enquiry = { id: string; reference: string; topic: string; message: string; handled: boolean; createdAt: string; name: string; email: string };
 
 /** Messages sent through the public website's contact form. */
 export function WebsiteEnquiries() {
-  const { data, error, loading, reload } = useApi<Enquiry[]>("/admin/enquiries");
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Enquiry>("/admin/enquiries", {}, 10);
   const done = useMutation((id: string) => api(`/admin/enquiries/${id}/handled`, { method: "POST" }));
-  const open = data?.filter((e) => !e.handled).length ?? 0;
+  const open = paged?.counts?.open ?? 0;
   return (
     <Card className="mt-6">
       <CardHeader title="Website enquiries" description="From the public contact form" action={<Badge tone={open ? "warning" : "success"}>{open} open</Badge>} />
+      <div className="border-b border-ink-100 px-5 pb-3"><SearchInput value={search} onChange={setSearch} label="Search enquiries" placeholder="Reference, topic or message" className="sm:w-80" /></div>
       {loading && <Spinner />}
       {error && <div className="p-4"><ErrorState error={error} onRetry={reload} /></div>}
-      {data?.length === 0 && <EmptyState icon={Globe} title="No enquiries yet" />}
+      {data?.length === 0 && <EmptyState icon={Globe} title={search ? "No enquiries match" : "No enquiries yet"} />}
       <ul className="divide-y divide-ink-100">
         {data?.map((e) => (
           <li key={e.id} className="flex flex-wrap items-start gap-3 px-5 py-3.5">
@@ -33,6 +35,7 @@ export function WebsiteEnquiries() {
           </li>
         ))}
       </ul>
+      <PagedFooter data={paged} onPage={setPage} />
     </Card>
   );
 }

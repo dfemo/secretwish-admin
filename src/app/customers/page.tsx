@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { Users } from "lucide-react";
-import { useApi } from "@/shared/lib/api";
+import { useApi, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date } from "@/shared/lib/format";
 import { Avatar, Badge, Card, EmptyState, ErrorState, Notice, PageHeader, SearchInput, Spinner, Tabs } from "@/shared/ui/primitives";
-import { DataTable, type Column } from "@/shared/ui/data";
+import { DataTable, type Column, PagedFooter } from "@/shared/ui/data";
 
 type Customer = { id: string; name: string; email: string; phone: string; city: string; plan: string; usedFreeSample: boolean; createdAt: string; ordersSent: number; spend: number; giftsReceived: number; wishlists: number; masked: boolean };
 
 export default function CustomersPage() {
   const [type, setType] = useState<"sender" | "recipient">("sender");
-  const [search, setSearch] = useState("");
-  const { data, error, loading, reload } = useApi<Customer[]>(`/admin/customers?type=${type}&search=${encodeURIComponent(search)}`);
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Customer>("/admin/customers", { type }, 25);
   const { fmt } = useSession();
 
   const columns: Column<Customer>[] = [
@@ -69,6 +68,7 @@ export default function CustomersPage() {
         {loading && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
         {data && <DataTable caption={type === "sender" ? "Senders" : "Recipients"} columns={columns} rows={data} rowKey={(c) => c.id} empty={<EmptyState icon={Users} title="No matches" />} />}
+        <PagedFooter data={paged} onPage={setPage} />
       </Card>
     </>
   );

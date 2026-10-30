@@ -1,9 +1,10 @@
 "use client";
 
+import { PagedFooter } from "@/shared/ui/data";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Boxes } from "lucide-react";
-import { api, useApi, useMutation } from "@/shared/lib/api";
+import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, ProductArt, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
@@ -13,15 +14,13 @@ type Product = { id: string; name: string; description: string; priceUsd: number
 function ProductsInner() {
   const params = useSearchParams();
   const [status, setStatus] = useState(params.get("status") ?? "PendingReview");
-  const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const { fmt, meta, persona } = useSession();
   const toast = useToast();
-  const { data, error, loading, reload } = useApi<Product[]>(`/admin/products?status=${status}&search=${encodeURIComponent(search)}&categoryId=${category}`);
-  const { data: all } = useApi<Product[]>(`/admin/products`);
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Product>("/admin/products", { status, categoryId: category }, 24);
   const [review, setReview] = useState<{ product: Product; decision: string } | null>(null);
   const run = useMutation((pid: string, decision: string, reason: string) => api(`/admin/products/${pid}/review`, { method: "POST", body: { decision, reason } }));
-  const count = (s: string) => all?.filter((p) => p.status === s).length ?? 0;
+  const count = (s: string) => paged?.counts?.[s] ?? 0;
   const canReview = persona.role === "OpsAdmin";
 
   return (
@@ -40,7 +39,7 @@ function ProductsInner() {
               {c.emoji}
             </span>
             <span className="mt-1 block text-[11px] leading-tight font-semibold text-ink-700">{c.name}</span>
-            <span className="text-[10px] text-ink-400">{all?.filter((p) => p.categoryId === c.id).length ?? 0} listings</span>
+            <span className="text-[10px] text-ink-400">{(paged?.counts?.[`category:${c.id}`] ?? 0).toLocaleString()} listings</span>
           </button>
         ))}
       </div>
@@ -121,6 +120,7 @@ function ProductsInner() {
             </li>
           ))}
         </ul>
+        <PagedFooter data={paged} onPage={setPage} />
       </Card>
       <ConfirmDialog
         open={!!review}

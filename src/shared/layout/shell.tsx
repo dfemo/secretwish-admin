@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Bell, ChevronsLeft, ChevronsRight, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
+import { Bell, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
-import { useSession } from "../lib/session";
+import { AUTH_URL, useSession } from "../lib/session";
 import { timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
@@ -115,7 +115,7 @@ export function CurrencyToggle() {
 }
 
 function PersonaMenu({ subtitle }: { subtitle: string }) {
-  const { persona, signOut } = useSession();
+  const { persona, signOut, isDemo } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -138,12 +138,19 @@ function PersonaMenu({ subtitle }: { subtitle: string }) {
           <div className="px-3 py-2">
             <p className="text-sm font-semibold">{persona.name}</p>
             <p className="truncate text-xs text-ink-500">{persona.email}</p>
-            <Badge tone="gold" className="mt-2">
-              Demo persona
-            </Badge>
+            {isDemo && (
+              <Badge tone="gold" className="mt-2">
+                Demo persona
+              </Badge>
+            )}
           </div>
+          {!isDemo && (
+            <a href={`${AUTH_URL}/account/manage`} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-100">
+              <KeyRound className="size-4" aria-hidden /> Sign-in and security
+            </a>
+          )}
           <button type="button" onClick={signOut} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-100">
-            <LogOut className="size-4" aria-hidden /> Switch persona
+            <LogOut className="size-4" aria-hidden /> {isDemo ? "Switch persona" : "Sign out"}
           </button>
         </div>
       )}

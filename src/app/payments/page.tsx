@@ -3,22 +3,29 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CreditCard } from "lucide-react";
-import { useApi } from "@/shared/lib/api";
+import { useApi, type Paged } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, pct } from "@/shared/lib/format";
 import { Card, EmptyState, ErrorState, KpiCard, Notice, PageHeader, SearchInput, Select, Spinner, StatusBadge } from "@/shared/ui/primitives";
-import { DataTable, Pagination, type Column } from "@/shared/ui/data";
+import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
 
 type Payment = { id: string; at: string; kind: string; amount: number; status: string; provider: string; providerReference: string; method: string; failureReason?: string; orderId: string; orderReference: string };
-type Data = { summary: { charges: number; succeeded: number; failed: number; pending: number; refundedAmount: number }; page: { items: Payment[]; total: number; page: number; pageSize: number } };
+type Data = { summary: { counts: { charges: number; succeeded: number; failed: number; pending: number }; refundedAmount: number }; page: Paged<Payment> };
+
+const n = (v: number) => (v >= 10000 ? "10,000+" : v.toLocaleString());
 
 export default function PaymentsPage() {
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
   const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [status, kind, search]);
-  const { data, error, loading, reload } = useApi<Data>(`/admin/payments?status=${status}&kind=${kind}&search=${encodeURIComponent(search)}&page=${page}`);
+  useEffect(() => setPage(1), [status, kind, debounced]);
+  const { data, error, loading, reload } = useApi<Data>(`/admin/payments?status=${status}&kind=${kind}&search=${encodeURIComponent(debounced)}&page=${page}`);
   const { fmt } = useSession();
 
   const cols: Column<Payment>[] = [
@@ -39,9 +46,9 @@ export default function PaymentsPage() {
       </Notice>
       {data && (
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard tint="plum" label="Charge attempts" value={data.summary.charges} />
-          <KpiCard tint="sage" label="Successful" value={data.summary.succeeded} hint={pct((data.summary.succeeded / Math.max(1, data.summary.charges)) * 100) + " success rate"} />
-          <KpiCard tint="rose" label="Failed" value={data.summary.failed} hint={`${data.summary.pending} pending`} />
+          <KpiCard tint="plum" label="Charge attempts" value={n(data.summary.counts.charges)} />
+          <KpiCard tint="sage" label="Successful" value={n(data.summary.counts.succeeded)} hint={data.summary.counts.charges < 10000 ? pct((data.summary.counts.succeeded / Math.max(1, data.summary.counts.charges)) * 100) + " success rate" : undefined} />
+          <KpiCard tint="rose" label="Failed" value={n(data.summary.counts.failed)} hint={`${n(data.summary.counts.pending)} pending`} />
           <KpiCard tint="gold" label="Refunded" value={fmt(data.summary.refundedAmount)} />
         </div>
       )}
@@ -65,7 +72,7 @@ export default function PaymentsPage() {
         {data && (
           <>
             <DataTable caption="Payments" columns={cols} rows={data.page.items} rowKey={(p) => p.id} empty={<EmptyState icon={CreditCard} title="No transactions match" />} />
-            <Pagination page={data.page.page} pageSize={data.page.pageSize} total={data.page.total} onPage={setPage} />
+            <PagedFooter data={data.page} onPage={setPage} />
           </>
         )}
       </Card>
