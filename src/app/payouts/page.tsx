@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ChevronDown, HandCoins, Play } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
+import { useAccess } from "@/lib/access";
 import { date } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, cx, EmptyState, ErrorState, KpiCard, Notice, PageHeader, PageSkeleton, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
@@ -21,7 +22,8 @@ type Data = { rules: { payoutHoldDays: number; requireDeliveryEvidenceForPayout:
 
 export default function PayoutsPage() {
   const { data, error, loading, reload } = useApi<Data>("/admin/payouts");
-  const { fmt, persona } = useSession();
+  const { fmt } = useSession();
+  const { can } = useAccess();
   const toast = useToast();
   const [tab, setTab] = useState<"pipeline" | "history">("pipeline");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function PayoutsPage() {
   const run = useMutation((vendorId: string) => api<{ reference: string; net: number; orders: number }>("/admin/payouts/run", { method: "POST", body: { vendorId } }));
   const callback = useMutation((id: string, status: string) => api(`/admin/payouts/${id}/provider-callback`, { method: "POST", body: { status } }));
   const reconcile = useMutation((id: string, body: string) => api(`/admin/payouts/${id}/reconcile`, { method: "POST", body: { body } }));
-  const canAct = persona.role === "Finance" || persona.role === "OpsAdmin";
+  const canAct = can("payouts.manage");
 
   if (loading) return <PageSkeleton />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;

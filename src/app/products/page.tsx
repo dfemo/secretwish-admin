@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Boxes } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
+import { useAccess } from "@/lib/access";
 import { Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, ProductArt, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 
@@ -15,13 +16,14 @@ function ProductsInner() {
   const params = useSearchParams();
   const [status, setStatus] = useState(params.get("status") ?? "PendingReview");
   const [category, setCategory] = useState("");
-  const { fmt, meta, persona } = useSession();
+  const { fmt, meta } = useSession();
+  const { can } = useAccess();
   const toast = useToast();
   const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Product>("/admin/products", { status, categoryId: category }, 24);
   const [review, setReview] = useState<{ product: Product; decision: string } | null>(null);
   const run = useMutation((pid: string, decision: string, reason: string) => api(`/admin/products/${pid}/review`, { method: "POST", body: { decision, reason } }));
   const count = (s: string) => paged?.counts?.[s] ?? 0;
-  const canReview = persona.role === "OpsAdmin";
+  const canReview = can("products.review");
 
   return (
     <>

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ArrowLeft, BadgeCheck, CircleX } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
+import { useAccess } from "@/lib/access";
 import { date, dateTime, pct } from "@/shared/lib/format";
 import { Avatar, Button, Card, CardHeader, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
@@ -29,7 +30,8 @@ const decisionCopy: Record<string, { label: string; tone: "primary" | "danger" |
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, error, loading, reload } = useApi<Detail>(`/admin/vendors/${id}`);
-  const { fmt, persona } = useSession();
+  const { fmt } = useSession();
+  const { can } = useAccess();
   const toast = useToast();
   const [decision, setDecision] = useState<string | null>(null);
   const decide = useMutation((d: string, reason: string) => api(`/admin/vendors/${id}/decision`, { method: "POST", body: { decision: d, reason } }));
@@ -38,7 +40,7 @@ export default function VendorDetailPage() {
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const v = data.vendor;
   const available = v.status === "Pending" ? ["approve", "reject"] : v.status === "Approved" ? ["suspend"] : v.status === "Suspended" ? ["reinstate"] : ["approve"];
-  const canDecide = persona.role === "OpsAdmin";
+  const canDecide = can("vendors.manage");
 
   return (
     <>

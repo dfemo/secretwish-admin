@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Globe } from "lucide-react";
 import { api, useMutation, usePagedApi } from "@/shared/lib/api";
+import { useAccess } from "@/lib/access";
 import { PagedFooter } from "@/shared/ui/data";
 import { timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Spinner } from "@/shared/ui/primitives";
@@ -13,6 +14,7 @@ export function WebsiteEnquiries() {
   const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Enquiry>("/admin/enquiries", {}, 10);
   const done = useMutation((id: string) => api(`/admin/enquiries/${id}/handled`, { method: "POST" }));
   const open = paged?.counts?.open ?? 0;
+  const canManage = useAccess().can("support.manage");
   return (
     <Card className="mt-6">
       <CardHeader title="Website enquiries" description="From the public contact form" action={<Badge tone={open ? "warning" : "success"}>{open} open</Badge>} />
@@ -30,7 +32,7 @@ export function WebsiteEnquiries() {
             {e.handled ? (
               <Badge tone="success" icon={CheckCircle2}>Handled</Badge>
             ) : (
-              <Button size="sm" variant="subtle" loading={done.pending} onClick={() => done.run(e.id)}>Mark handled</Button>
+              canManage && <Button size="sm" variant="subtle" loading={done.pending} onClick={() => done.run(e.id)}>Mark handled</Button>
             )}
           </li>
         ))}

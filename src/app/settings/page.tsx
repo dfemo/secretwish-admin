@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
-import { useSession } from "@/shared/lib/session";
+import Link from "next/link";
 import { Button, Card, CardHeader, ErrorState, Field, Input, Notice, PageHeader, PageSkeleton, Switch } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { EmailDeliverySettings } from "./email-settings";
 
 type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number };
-type Data = { settings: Settings; permissions: Record<string, string>[] };
+type Data = { settings: Settings; canEdit: boolean };
 
 export default function SettingsPage() {
   const { data, error, loading, reload } = useApi<Data>("/admin/settings");
-  const { persona } = useSession();
   const toast = useToast();
   const [form, setForm] = useState<Settings | null>(null);
   const [confirm, setConfirm] = useState(false);
   const save = useMutation((s: Settings) => api<Settings>("/admin/settings", { method: "PUT", body: s }));
   useEffect(() => { if (data) setForm(data.settings); }, [data]);
   if (loading || !form) return error ? <ErrorState error={error} onRetry={reload} /> : <PageSkeleton />;
-  const editable = persona.role === "OpsAdmin";
+  const editable = data!.canEdit;
   const num = (k: keyof Settings) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: Number(e.target.value) });
   const errs = {
     commission: form.commissionRate < 0 || form.commissionRate > 0.5 ? "Between 0% and 50%." : null,
@@ -32,8 +31,8 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings & Permissions" description="Business rules that drive payouts, pricing display and verification. Changes are audited." />
-      {!editable && <Notice className="mb-6">You can view settings. Only operations admins can change them.</Notice>}
+      <PageHeader title="Settings" description="Business rules that drive payouts, pricing display and verification. Changes are audited." />
+      {!editable && <Notice className="mb-6">You can view settings. Your team role doesn't include changing them.</Notice>}
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="Marketplace rules" />
@@ -74,25 +73,10 @@ export default function SettingsPage() {
         </Card>
       </div>
       <EmailDeliverySettings />
-      <Card className="mt-6">
-        <CardHeader title="Role permissions" description="Least-privilege access enforced by the API" />
-        <div className="overflow-x-auto px-2 pb-3">
-          <table className="w-full min-w-[640px] text-left text-[13px]">
-            <caption className="sr-only">Permissions by role</caption>
-            <thead><tr className="text-xs text-ink-500"><th className="px-3 py-2 font-semibold">Capability</th><th className="px-3 py-2 font-semibold">Operations admin</th><th className="px-3 py-2 font-semibold">Finance</th><th className="px-3 py-2 font-semibold">Support</th></tr></thead>
-            <tbody>
-              {data!.permissions.map((p) => (
-                <tr key={p.capability} className="border-t border-ink-100">
-                  <th scope="row" className="px-3 py-2.5 font-semibold">{p.capability}</th>
-                  {["OpsAdmin", "Finance", "Support"].map((r) => (
-                    <td key={r} className={`px-3 py-2.5 ${p[r] === "No" ? "text-ink-400" : p[r] === "Yes" ? "font-semibold text-success-700" : "text-ink-700"}`}>{p[r]}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <Notice className="mt-6" title="Who can do what">
+        Team roles and their privileges are managed by super admins in{" "}
+        <Link href="/roles" className="font-semibold text-plum-700 underline">Roles &amp; Privileges</Link>.
+      </Notice>
       <ConfirmDialog
         open={confirm}
         onClose={() => setConfirm(false)}

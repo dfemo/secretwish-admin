@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LifeBuoy, Lock, Send } from "lucide-react";
 import { api, useApi, useMutation, type Paged } from "@/shared/lib/api";
+import { useAccess } from "@/lib/access";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, humanize, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, cx, EmptyState, ErrorState, KpiCard, PageHeader, Select, Spinner, StatusBadge, Switch, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
@@ -106,6 +107,7 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(true);
   const toast = useToast();
+  const canManage = useAccess().can("support.manage");
   useEffect(() => { if (fetched) setT(fetched); }, [fetched]);
   const note = useMutation(() => api<Ticket>(`/admin/tickets/${id}/notes`, { method: "POST", body: { body, internal } }));
   const assign = useMutation((a: string) => api<Ticket>(`/admin/tickets/${id}/assign`, { method: "POST", body: { assignee: a || null } }));
@@ -125,14 +127,14 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="assignee" className="text-xs font-semibold text-ink-500">Assigned to</label>
-              <Select id="assignee" value={t.assignedTo ?? ""} onChange={async (e) => { const r = await assign.run(e.target.value); if (r) setT(r); }}>
+              <Select id="assignee" disabled={!canManage} value={t.assignedTo ?? ""} onChange={async (e) => { const r = await assign.run(e.target.value); if (r) setT(r); }}>
                 <option value="">Unassigned</option>
                 {agents.map((a) => (<option key={a}>{a}</option>))}
               </Select>
             </div>
             <div>
               <label htmlFor="tstatus" className="text-xs font-semibold text-ink-500">Status</label>
-              <Select id="tstatus" value={t.status} onChange={async (e) => { const r = await setStatus.run(e.target.value); if (r) { setT(r); toast({ tone: "success", title: `Ticket ${e.target.value.toLowerCase()}` }); } }}>
+              <Select id="tstatus" disabled={!canManage} value={t.status} onChange={async (e) => { const r = await setStatus.run(e.target.value); if (r) { setT(r); toast({ tone: "success", title: `Ticket ${e.target.value.toLowerCase()}` }); } }}>
                 {["Open", "Pending", "Resolved", "Closed"].map((s) => (<option key={s}>{s}</option>))}
               </Select>
             </div>
@@ -151,6 +153,7 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
               ))}
             </ol>
           </div>
+          {canManage && (
           <div className="rounded-2xl border border-ink-200 p-3">
             <label htmlFor="reply" className="sr-only">Message</label>
             <Textarea id="reply" value={body} onChange={(e) => setBody(e.target.value)} placeholder={internal ? "Internal note for the team…" : "Reply to the customer…"} />
@@ -161,6 +164,7 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
               </Button>
             </div>
           </div>
+          )}
         </div>
       )}
     </Modal>

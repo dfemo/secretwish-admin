@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Lock, MessageSquarePlus, ShieldCheck } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
+import { useAccess } from "@/lib/access";
 import { date, dateTime } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, cx, ErrorState, Notice, PageSkeleton, Stat, StatusBadge, Textarea } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
@@ -33,7 +34,8 @@ type Detail = {
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: fetched, error, loading, reload, setData } = useApi<Detail>(`/admin/orders/${id}`);
-  const { fmt, persona } = useSession();
+  const { fmt } = useSession();
+  const { can, dataAccess } = useAccess();
   const toast = useToast();
   const [action, setAction] = useState<OrderAction | null>(null);
   const [revealOpen, setRevealOpen] = useState(false);
@@ -139,6 +141,7 @@ export default function OrderDetailPage() {
             <CardHeader title="Order timeline" description="Fulfilment events and internal notes" />
             <div className="px-5 pt-4 pb-5">
               <Timeline items={d.events.map((e) => ({ id: e.id, at: e.at, title: e.title, detail: e.detail, actor: e.actor, internal: e.internal }))} formatTime={dateTime} />
+              {can("orders.manage") && (
               <div className="mt-6 rounded-xl border border-dashed border-ink-200 p-3">
                 <label htmlFor="note" className="text-xs font-semibold text-ink-700">
                   Add internal note <span className="font-normal text-ink-400">(visible to SecretWish staff only)</span>
@@ -164,6 +167,7 @@ export default function OrderDetailPage() {
                   </Button>
                 </div>
               </div>
+              )}
             </div>
           </Card>
 
@@ -208,7 +212,7 @@ export default function OrderDetailPage() {
               title="People"
               description={people.masked ? people.maskReason : "Full details visible for your role"}
               action={
-                people.masked && persona.role !== "Finance" ? (
+                people.masked && can("orders.reveal") ? (
                   <Button size="sm" variant="secondary" icon={Eye} onClick={() => setRevealOpen(true)}>
                     Reveal
                   </Button>
@@ -305,7 +309,7 @@ export default function OrderDetailPage() {
               </ul>
             </Card>
           )}
-          {d.status === "Dispatched" && persona.role === "OpsAdmin" && (
+          {d.status === "Dispatched" && dataAccess === "OpsAdmin" && can("orders.manage") && (
             <Notice tone="info" title="Vendors can't mark orders delivered">
               Delivery is confirmed by the recipient&apos;s secret code or by operations with courier evidence.
             </Notice>

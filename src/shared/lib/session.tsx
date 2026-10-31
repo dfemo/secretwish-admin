@@ -262,7 +262,7 @@ function AccessGate({ children, onProfileChange }: { children: ReactNode; onProf
       <Centered>
         <Logo suffix="Operations" />
         <h1 className="mt-6 font-display text-2xl font-semibold text-plum-900">No team access</h1>
-        <p className="mt-2 text-sm text-ink-500">You&apos;re signed in as {persona.email || persona.name}, but this account isn&apos;t part of the SecretWish team. An operations admin can give you access.</p>
+        <p className="mt-2 text-sm text-ink-500">You&apos;re signed in as {persona.email || persona.name}, but this account isn&apos;t part of the SecretWish team. Team access can only be given by a SecretWish super admin.</p>
         <Button className="mt-5" variant="secondary" onClick={signOut}>Sign out</Button>
       </Centered>
     );
@@ -361,7 +361,12 @@ function SignInChooser({ app, intro, demoEnabled, onPick }: { app: AppName; intr
           <h2 className="font-display text-xl font-semibold text-plum-900">Welcome to SecretWish</h2>
           <div className="mt-4 grid gap-2">
             <Button icon={LogIn} onClick={() => startSignIn(app)}>Sign in</Button>
-            <Button icon={UserPlus} variant="secondary" onClick={() => startSignIn(app, "signup")}>Create an account</Button>
+            {app === "admin" ? (
+              // Team accounts are created by a super admin; nobody can sign up as staff.
+              <p className="text-xs text-ink-500">Team accounts are created by a SecretWish super admin. Sign in with the email they added for you.</p>
+            ) : (
+              <Button icon={UserPlus} variant="secondary" onClick={() => startSignIn(app, "signup")}>Create an account</Button>
+            )}
           </div>
           {demoEnabled && <DemoPersonas app={app} onPick={onPick} />}
         </div>

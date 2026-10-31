@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { RotateCcw, UserPlus } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
+import { useAccess } from "@/lib/access";
 import { dateTime, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Notice, PageHeader, Select, Spinner, StatusBadge, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
 import { Modal, useToast } from "@/shared/ui/overlay";
@@ -35,7 +36,9 @@ function RefundsInner() {
   const decide = useMutation((id: string) => api<Case>(`/admin/cases/${id}/decide`, { method: "POST", body: { decision, reason, amount: amount ? Number(amount) : null } }));
   const assign = useMutation((id: string, assignee: string) => api<Case>(`/admin/cases/${id}/assign`, { method: "POST", body: { assignee } }));
   const addEvidence = useMutation((id: string) => api<Case>(`/admin/cases/${id}/evidence`, { method: "POST", body: { body: evidence } }));
-  const canDecide = persona.role === "Finance" || persona.role === "OpsAdmin";
+  const { can } = useAccess();
+  const canDecide = can("refunds.decide");
+  const canWork = can("refunds.manage");
   const open = (c: Case) => {
     setSelected(c);
     setDecision(c.type === "Chargeback" ? "reject" : "approve-refund");
@@ -129,7 +132,7 @@ function RefundsInner() {
                     </Select>
                   )}
                 </Field>
-                {!selected.assignedTo && <Button variant="subtle" icon={UserPlus} onClick={async () => { const r = await assign.run(selected.id, persona.name); if (r) setSelected(r); }}>Assign to me</Button>}
+                {!selected.assignedTo && canWork && <Button variant="subtle" icon={UserPlus} onClick={async () => { const r = await assign.run(selected.id, persona.name); if (r) setSelected(r); }}>Assign to me</Button>}
               </div>
             )}
             {selected.decision ? (
