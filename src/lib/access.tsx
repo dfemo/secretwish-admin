@@ -20,6 +20,7 @@ const Ctx = createContext<Access | null>(null);
 export const areaPermission: Record<string, Permission> = {
   "/": "overview.view",
   "/orders": "orders.view",
+  "/requests": "orders.view",
   "/customers": "customers.view",
   "/vendors": "vendors.view",
   "/products": "products.view",

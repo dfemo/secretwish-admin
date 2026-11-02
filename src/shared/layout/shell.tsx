@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bell, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
 import { AUTH_URL, useSession } from "../lib/session";
-import { timeAgo } from "../lib/format";
+import { currencySymbol, timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
 
@@ -94,23 +94,26 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
   );
 }
 
+/** Display currency: defaults to where the viewer is and remembers their choice on this device. */
 export function CurrencyToggle() {
-  const { currency, setCurrency, meta } = useSession();
+  const { currency, setCurrency, meta, rate } = useSession();
+  const options = meta?.currencies ?? [{ code: "NGN", name: "Nigerian naira", perUsd: rate("NGN") }, { code: "USD", name: "US dollar", perUsd: 1 }];
   return (
-    <div className="flex items-center rounded-xl bg-ink-100 p-0.5 text-xs font-semibold" role="group" aria-label="Display currency">
-      {(["USD", "NGN"] as const).map((c) => (
-        <button
-          key={c}
-          type="button"
-          aria-pressed={currency === c}
-          onClick={() => setCurrency(c)}
-          title={c === "NGN" ? `Converted at ₦${meta?.fxRateNgn ?? "…"} / $1 (sample rate)` : "Base currency"}
-          className={cx("rounded-lg px-2.5 py-1.5", currency === c ? "bg-white text-plum-800 shadow-sm" : "text-ink-500")}
-        >
-          {c === "USD" ? "$ USD" : "₦ NGN"}
-        </button>
-      ))}
-    </div>
+    <label className="relative inline-flex items-center">
+      <span className="sr-only">Display currency</span>
+      <select
+        value={currency}
+        onChange={(e) => setCurrency(e.target.value)}
+        title={currency === "USD" ? "Base currency" : `Converted at ${rate(currency)} ${currency} per $1 (sample rate)`}
+        className="h-9 cursor-pointer rounded-xl border-0 bg-ink-100 py-0 pr-7 pl-2.5 text-xs font-semibold text-plum-800 focus:ring-2 focus:ring-plum-200"
+      >
+        {options.map((c) => (
+          <option key={c.code} value={c.code}>
+            {currencySymbol(c.code)} {c.code}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -282,7 +285,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
             <PersonaMenu subtitle={subtitle} />
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 md:px-8 md:py-8">
+        <main id="main" className="mx-auto w-full max-w-[1680px] min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 2xl:px-8">
           {children}
         </main>
       </div>

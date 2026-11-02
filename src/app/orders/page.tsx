@@ -73,36 +73,35 @@ function OrdersInner() {
     },
     { key: "date", header: "Date", sortKey: "date", render: (r) => <span className="text-xs whitespace-nowrap text-ink-700">{dateTime(r.createdAt)}</span> },
     {
-      key: "sender",
-      header: "Sender",
-      hideOnMobile: true,
+      // Sender and recipient share a column so the whole table fits on a desktop screen without sideways scrolling.
+      key: "people",
+      header: "Sender → recipient",
       render: (r) => (
-        <div className="text-xs">
-          <p className="font-medium text-ink-900">{r.people.senderName}</p>
-          <p className="text-ink-500">{r.people.senderEmail}</p>
-        </div>
-      ),
-    },
-    {
-      key: "recipient",
-      header: "Recipient",
-      render: (r) => (
-        <div className="text-xs">
-          <p className="font-medium text-ink-900">{r.people.recipientName}</p>
-          <p className="text-ink-500">
-            {r.people.deliveryCity}
+        <div className="max-w-[220px] text-xs">
+          <p className="truncate font-medium text-ink-900" title={r.people.senderEmail}>{r.people.senderName}</p>
+          <p className="truncate text-ink-500">
+            → {r.people.recipientName} · {r.people.deliveryCity}
             {r.viaWishlist && " · wishlist"}
           </p>
         </div>
       ),
     },
-    { key: "vendor", header: "Vendor", sortKey: "vendor", render: (r) => <span className="text-xs font-medium">{r.vendor.name}</span> },
+    { key: "vendor", header: "Vendor", sortKey: "vendor", render: (r) => <span className="block max-w-[140px] truncate text-xs font-medium" title={r.vendor.name}>{r.vendor.name}</span> },
     { key: "total", header: "Value", sortKey: "total", align: "right", render: (r) => <span className="font-semibold">{fmt(r.total)}</span> },
     { key: "status", header: "Order status", sortKey: "status", render: (r) => <StatusBadge status={r.status} /> },
-    { key: "payment", header: "Payment", hideOnMobile: true, render: (r) => <StatusBadge status={r.paymentStatus} /> },
-    { key: "fulfil", header: "Fulfilment", hideOnMobile: true, render: (r) => <StatusBadge status={r.fulfilmentStatus} /> },
-    { key: "delivery", header: "Delivery", hideOnMobile: true, render: (r) => <StatusBadge status={r.deliveryStatus} /> },
-    { key: "refund", header: "Refund", hideOnMobile: true, render: (r) => (r.refundStatus === "None" ? <span className="text-ink-300">—</span> : <StatusBadge status={r.refundStatus} />) },
+    {
+      key: "progress",
+      header: "Payment · fulfilment · delivery",
+      hideOnMobile: true,
+      render: (r) => (
+        <div className="flex max-w-[300px] flex-wrap gap-1 whitespace-normal">
+          <StatusBadge status={r.paymentStatus} />
+          <StatusBadge status={r.fulfilmentStatus} />
+          <StatusBadge status={r.deliveryStatus} />
+          {r.refundStatus !== "None" && <StatusBadge status={r.refundStatus} />}
+        </div>
+      ),
+    },
   ];
 
   const filtersActive = !!(status || debounced || vendorId);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button, Card, CardHeader, ErrorState, Field, Input, Notice, PageHeader, PageSkeleton, Switch } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { EmailDeliverySettings } from "./email-settings";
+import { CurrencySettings, SampleDataSettings } from "./data-settings";
 
 type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number };
 type Data = { settings: Settings; canEdit: boolean };
@@ -72,7 +73,9 @@ export default function SettingsPage() {
           )}
         </Card>
       </div>
+      <CurrencySettings />
       <EmailDeliverySettings />
+      <SampleDataSettings />
       <Notice className="mt-6" title="Who can do what">
         Team roles and their privileges are managed by super admins in{" "}
         <Link href="/roles" className="font-semibold text-plum-700 underline">Roles &amp; Privileges</Link>.

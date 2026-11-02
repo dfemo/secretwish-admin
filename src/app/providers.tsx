@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { BarChart3, Boxes, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
+import { BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
 import { ToastProvider } from "@/shared/ui/overlay";
@@ -15,6 +15,7 @@ const sections: NavSection[] = [
     title: "Marketplace",
     items: [
       { href: "/orders", label: "Orders & Fulfilment", icon: Package },
+      { href: "/requests", label: "Requests", icon: Sparkles },
       { href: "/customers", label: "Customers & Recipients", icon: Users },
       { href: "/vendors", label: "Vendors & Approvals", icon: Store },
       { href: "/products", label: "Products & Categories", icon: Boxes },

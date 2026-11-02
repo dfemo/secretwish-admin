@@ -10,7 +10,7 @@ import { Avatar, Card, EmptyState, ErrorState, PageHeader, SearchInput, Spinner,
 import { DataTable, type Column, PagedFooter } from "@/shared/ui/data";
 
 type Vendor = { id: string; name: string; contactName: string; city: string; primaryCategory: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; onTimeRate: number; appliedAt: string };
-type Row = { vendor: Vendor; orders: number; gmv: number; products: number; counts: Record<string, number> };
+type Row = { vendor: Vendor; kyc: { verified: number; submitted: number; rejected: number; readyForReview: boolean }; orders: number; gmv: number; products: number; counts: Record<string, number> };
 
 function VendorsInner() {
   const params = useSearchParams();
@@ -41,10 +41,17 @@ function VendorsInner() {
       key: "verify",
       header: "Verification",
       render: (r) => {
-        const n = [r.vendor.businessVerified, r.vendor.bankVerified, r.vendor.idVerified].filter(Boolean).length;
+        const k = r.kyc;
         return (
-          <span className="inline-flex items-center gap-1 text-xs">
-            <BadgeCheck className={n === 3 ? "size-4 text-success-600" : "size-4 text-ink-300"} aria-hidden /> {n}/3 checks
+          <span className="inline-flex flex-col text-xs">
+            <span className="inline-flex items-center gap-1">
+              <BadgeCheck className={k.verified === 3 ? "size-4 text-success-600" : "size-4 text-ink-300"} aria-hidden /> {k.verified}/3 verified
+            </span>
+            {k.verified < 3 && (
+              <span className={k.rejected ? "text-danger-700" : k.readyForReview ? "font-semibold text-warning-700" : "text-ink-500"}>
+                {k.rejected ? `${k.rejected} sent back` : k.readyForReview ? "Ready to review" : `${k.submitted + k.verified}/3 submitted`}
+              </span>
+            )}
           </span>
         );
       },

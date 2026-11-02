@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, BadgeCheck, CircleX } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
 import { date, dateTime, pct } from "@/shared/lib/format";
 import { Avatar, Button, Card, CardHeader, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
+import { KycReview, type Kyc } from "./kyc-review";
 
 type Detail = {
   vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string };
+  kyc: Kyc;
   products: { id: string; name: string; emoji: string; tint: string; priceUsd: number; status: string; stock: number; reviewNote?: string }[];
   stats: { orders: number; gmv: number; delivered: number; exceptions: number; refunds: number };
   recentOrders: { id: string; reference: string; createdAt: string; status: string; total: number; product: string }[];
@@ -62,13 +64,23 @@ export default function VendorDetailPage() {
         </div>
         <div className="flex gap-2">
           {available.map((a) => (
-            <Button key={a} variant={decisionCopy[a].tone === "danger" ? "secondary" : "primary"} disabled={!canDecide} onClick={() => setDecision(a)}>
+            <Button key={a} variant={decisionCopy[a].tone === "danger" ? "secondary" : "primary"} disabled={!canDecide || (a === "approve" && !data.kyc.allVerified)} onClick={() => setDecision(a)}>
               {decisionCopy[a].label}
             </Button>
           ))}
         </div>
       </header>
-      {!canDecide && <Notice className="mb-6">Only operations admins can change vendor status. You have read-only access.</Notice>}
+      {!canDecide && <Notice className="mb-6">Your team role doesn&apos;t include approving or suspending vendors. You have read-only access.</Notice>}
+      {available.includes("approve") && !data.kyc.allVerified && (
+        <Notice tone="warning" className="mb-6" title="Can't approve yet">
+          {data.kyc.readyForReview ? "Verify each check below before approving this store." : "The vendor hasn't sent all their verification documents yet. Approval unlocks once every check is verified."}
+        </Notice>
+      )}
+      {v.status === "Approved" && !data.kyc.allVerified && (
+        <Notice tone="warning" className="mb-6" title="Approved without verified KYC">
+          This store was approved before verification was required. It has been asked to submit its documents from its Store page.
+        </Notice>
+      )}
       {v.decisionReason && (
         <Notice className="mb-6" tone={v.status === "Approved" ? "success" : "warning"} title="Latest decision reason">
           {v.decisionReason}
@@ -84,24 +96,15 @@ export default function VendorDetailPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <Card>
-          <CardHeader title="Verification" description="Know-your-business checks (simulated)" />
-          <ul className="space-y-2 p-5 text-sm">
-            {[
-              ["Business registration (CAC)", v.businessVerified],
-              ["Settlement bank account", v.bankVerified],
-              ["Director ID", v.idVerified],
-            ].map(([label, ok]) => (
-              <li key={label as string} className="flex items-center justify-between rounded-xl bg-ink-50 px-3 py-2">
-                <span>{label}</span>
-                <span className={ok ? "inline-flex items-center gap-1 font-semibold text-success-700" : "inline-flex items-center gap-1 font-semibold text-ink-500"}>
-                  {ok ? <BadgeCheck className="size-4" aria-hidden /> : <CircleX className="size-4" aria-hidden />} {ok ? "Verified" : "Not verified"}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="px-5 pb-5 text-[13px] text-ink-700">{v.description}</p>
-        </Card>
+        <div className="space-y-6">
+          <KycReview vendorId={v.id} kyc={data.kyc} canReview={canDecide} onChanged={reload} />
+          {v.description && (
+            <Card className="p-5">
+              <p className="text-xs font-semibold text-ink-500">About the store</p>
+              <p className="mt-1 text-[13px] text-ink-700">{v.description}</p>
+            </Card>
+          )}
+        </div>
         <Card>
           <CardHeader title="Listings" description="Review quality before products go live" action={<Link href="/products" className="text-xs font-semibold text-plum-700 hover:underline">Review queue</Link>} />
           <ul className="grid gap-2 p-4 sm:grid-cols-2">

@@ -1,16 +1,53 @@
-export type Currency = "USD" | "NGN";
+/** An ISO currency code offered by the API (/meta currencies), e.g. "NGN", "USD", "GHS". */
+export type Currency = string;
 
-/** Prices are stored in USD (platform base currency) and shown in local currency at the recorded FX rate. */
-export function money(usd: number | null | undefined, currency: Currency = "USD", fx = 1550, opts?: { compact?: boolean }) {
-  if (usd === null || usd === undefined || Number.isNaN(usd)) return "—";
-  const value = currency === "NGN" ? usd * fx : usd;
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
+/** Currencies usually shown without decimals because their units are small. */
+const wholeUnits = new Set(["NGN", "KES", "GHS"]);
+const locales: Record<string, string> = { NGN: "en-NG", GHS: "en-GH", KES: "en-KE", ZAR: "en-ZA", GBP: "en-GB", EUR: "en-IE", CAD: "en-CA", USD: "en-US" };
+
+/** Formats an amount already in `currency` (e.g. a budget exactly as the sender typed it). */
+export function moneyIn(amount: number | null | undefined, currency: Currency = "USD", opts?: { compact?: boolean }) {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) return "—";
+  const whole = wholeUnits.has(currency);
+  return new Intl.NumberFormat(locales[currency] ?? "en-US", {
     style: "currency",
     currency,
     notation: opts?.compact ? "compact" : "standard",
-    maximumFractionDigits: opts?.compact ? 1 : currency === "NGN" ? 0 : 2,
-    minimumFractionDigits: opts?.compact ? 0 : currency === "NGN" ? 0 : 2,
-  }).format(value);
+    maximumFractionDigits: opts?.compact ? 1 : whole ? 0 : 2,
+    minimumFractionDigits: opts?.compact ? 0 : whole ? 0 : 2,
+  }).format(amount);
+}
+
+/** Prices are stored in USD (platform base currency) and shown in another currency at its rate per US dollar. */
+export function money(usd: number | null | undefined, currency: Currency = "USD", perUsd = 1, opts?: { compact?: boolean }) {
+  if (usd === null || usd === undefined || Number.isNaN(usd)) return "—";
+  return moneyIn(usd * (currency === "USD" ? 1 : perUsd), currency, opts);
+}
+
+/** The symbol for a currency, e.g. "₦" or "GH₵", for labelling amount inputs. */
+export function currencySymbol(currency: Currency) {
+  return new Intl.NumberFormat(locales[currency] ?? "en-US", { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
+}
+
+/** A sensible default currency from where the browser says it is (time zone first, then language region). */
+export function guessCurrency(available: string[]): Currency {
+  const byZone: Record<string, string> = {
+    "Africa/Lagos": "NGN", "Africa/Accra": "GHS", "Africa/Nairobi": "KES", "Africa/Johannesburg": "ZAR", "Europe/London": "GBP",
+    "America/Toronto": "CAD", "America/Vancouver": "CAD",
+  };
+  const byRegion: Record<string, string> = { NG: "NGN", GH: "GHS", KE: "KES", ZA: "ZAR", GB: "GBP", CA: "CAD", US: "USD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR" };
+  let guess: string | undefined;
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    guess = byZone[zone] ?? (zone.startsWith("Europe/") ? "EUR" : undefined);
+    if (!guess) {
+      const region = new Intl.Locale(navigator.language).maximize().region;
+      guess = region ? byRegion[region] : undefined;
+    }
+  } catch {
+    /* fall through to the default */
+  }
+  return guess && available.includes(guess) ? guess : available.includes("NGN") ? "NGN" : "USD";
 }
 
 export function number(n: number | null | undefined) {
