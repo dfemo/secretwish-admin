@@ -67,6 +67,8 @@ const map: Record<string, Meta> = {
   // Derived sub-statuses
   "Not started": { label: "Not started", tone: "neutral", icon: CircleDashed },
   "Awaiting acceptance": { label: "Awaiting acceptance", tone: "gold", icon: Hourglass },
+  "Awaiting vendor": { label: "Awaiting vendor", tone: "gold", icon: Hourglass },
+  "Not sent yet": { label: "Not sent yet", tone: "neutral", icon: CircleDashed },
   Fulfilled: { label: "Fulfilled", tone: "success", icon: PackageCheck },
   "In transit": { label: "In transit", tone: "info", icon: Truck },
   "Not dispatched": { label: "Not dispatched", tone: "neutral", icon: CircleDashed },

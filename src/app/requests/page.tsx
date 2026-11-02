@@ -7,7 +7,8 @@ import { usePagedApi } from "@/shared/lib/api";
 import { PagedFooter } from "@/shared/ui/data";
 import { useSession } from "@/shared/lib/session";
 import { date, moneyIn, timeAgo } from "@/shared/lib/format";
-import { Badge, Card, cx, EmptyState, ErrorState, PageHeader, SearchInput, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
+import { Journey } from "./journey";
+import { Badge, Card, EmptyState, ErrorState, PageHeader, SearchInput, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 
 type Row = {
   id: string; reference: string; title: string; status: string; createdAt: string; neededBy: string | null; deliveryCity: string;
@@ -19,26 +20,6 @@ type Row = {
   order: { id: string; reference: string; status: string; paymentStatus: string; total: number; deliveredAt: string | null } | null;
   stage: string; step: number;
 };
-
-const steps = ["Requested", "Quoted", "Vendor chosen", "Paid", "Preparing", "Dispatched", "Delivered"];
-
-/** Seven dots from request to delivery; a stopped request (closed, cancelled, refunded) is shown in red at the step it reached. */
-function Journey({ step, stage }: { step: number; stage: string }) {
-  const stopped = step < 0;
-  return (
-    <div className="min-w-[230px]">
-      <ol className="flex items-center gap-1" aria-label={`Progress: ${stage}`}>
-        {steps.map((s, i) => (
-          <li key={s} className="flex items-center gap-1" title={s}>
-            <span className={cx("size-2.5 rounded-full", stopped ? "bg-danger-300" : i <= step ? "bg-plum-700" : "bg-ink-200", i === step && !stopped && "ring-4 ring-plum-100")} />
-            {i < steps.length - 1 && <span className={cx("h-0.5 w-4", !stopped && i < step ? "bg-plum-700" : "bg-ink-200")} />}
-          </li>
-        ))}
-      </ol>
-      <p className={cx("mt-1.5 text-xs font-semibold", stopped ? "text-danger-700" : step === 6 ? "text-success-700" : "text-plum-800")}>{stage}</p>
-    </div>
-  );
-}
 
 export default function RequestsPage() {
   const [status, setStatus] = useState("");
@@ -70,12 +51,12 @@ export default function RequestsPage() {
         {items?.length === 0 && <EmptyState icon={Sparkles} title={search || status ? "No requests match" : "No surprise requests yet"} description="Requests appear here as soon as a sender posts one." />}
         <ul className="divide-y divide-ink-100">
           {items?.map((r) => (
-            <li key={r.id} className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center">
+            <li key={r.id} className="relative grid gap-4 p-4 transition-colors hover:bg-ivory-100/60 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center">
               <div className="min-w-0">
                 <p className="text-xs text-ink-500">
                   {r.reference} · {timeAgo(r.createdAt)} {r.viaWishlist && <Badge tone="plum">From a wishlist</Badge>}
                 </p>
-                <p className="truncate font-semibold text-plum-900">{r.title}</p>
+                <Link href={`/requests/${r.id}`} className="block truncate font-semibold text-plum-900 after:absolute after:inset-0 hover:underline">{r.title}</Link>
                 <p className="text-xs text-ink-500">
                   {r.sender} → {r.recipient} · {r.deliveryCity}
                   {r.neededBy && ` · needed by ${date(r.neededBy)}`}
@@ -92,7 +73,7 @@ export default function RequestsPage() {
               <div className="text-xs">
                 {r.vendor ? (
                   <>
-                    <Link href={`/vendors/${r.vendor.id}`} className="font-semibold text-plum-700 hover:underline">{r.vendor.name}</Link>
+                    <Link href={`/vendors/${r.vendor.id}`} className="relative z-10 font-semibold text-plum-700 hover:underline">{r.vendor.name}</Link>
                     <p className="text-ink-500">Chosen at {fmt(r.vendor.priceUsd)}</p>
                   </>
                 ) : (
@@ -100,7 +81,7 @@ export default function RequestsPage() {
                 )}
                 {r.order && (
                   <p className="mt-1 flex flex-wrap items-center gap-1">
-                    <Link href={`/orders/${r.order.id}`} className="font-semibold text-plum-700 hover:underline">{r.order.reference}</Link>
+                    <Link href={`/orders/${r.order.id}`} className="relative z-10 font-semibold text-plum-700 hover:underline">{r.order.reference}</Link>
                     <StatusBadge status={r.order.paymentStatus} />
                   </p>
                 )}
