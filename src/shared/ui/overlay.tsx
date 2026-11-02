@@ -21,7 +21,7 @@ export function Modal({
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -64,7 +64,7 @@ export function Modal({
   }, [open, mounted]);
 
   if (!open || !mounted) return null;
-  const w = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];
+  const w = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl", "2xl": "max-w-6xl" }[size];
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-plum-950/40 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
