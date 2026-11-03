@@ -190,7 +190,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
     });
   };
   // Menu sections fold away to keep the sidebar short. Choices are remembered per browser; until someone chooses, only the
-  // section holding the current page is open. That section always stays open so you can see where you are.
+  // section holding the current page is open. Going to a page opens its section, and any section can be folded again.
   const [folds, setFolds] = useState<Record<string, boolean>>({});
   useEffect(() => {
     try {
@@ -198,7 +198,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
     } catch {}
   }, []);
   const holdsCurrent = (sec: NavSection) => sec.items.some((it) => isActive(pathname, it.href));
-  const isOpen = (sec: NavSection) => !sec.title || holdsCurrent(sec) || (folds[sec.title] ?? false);
+  const isOpen = (sec: NavSection) => !sec.title || (folds[sec.title] ?? holdsCurrent(sec));
   const fold = (title: string, open: boolean) =>
     setFolds((f) => {
       const next = { ...f, [title]: open };
@@ -207,13 +207,19 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
       } catch {}
       return next;
     });
+  // Arriving on a page (by link, search or the address bar) opens its section once; folding it afterwards sticks.
+  const current = sections.find((sec) => sec.title && holdsCurrent(sec))?.title;
+  useEffect(() => {
+    if (current && folds[current] === false) fold(current, true);
+    // Only when the page changes, not on every fold.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const nav = (compact: boolean) => (
     <nav aria-label="Main" className={cx("flex-1 overflow-y-auto px-3 py-3 scrollbar-thin", compact ? "space-y-2" : "space-y-1")}>
       {sections.map((s, i) => {
         // The icon-only rail shows every item; the full menu folds by section.
         const open = compact || isOpen(s);
-        const pinned = !!s.title && holdsCurrent(s);
         const waiting = s.items.reduce((n, it) => n + (typeof it.badge === "number" ? it.badge : 0), 0);
         const listId = `nav-${i}`;
         return (
@@ -221,16 +227,14 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
           {s.title && !compact && (
             <button
               type="button"
-              onClick={() => !pinned && fold(s.title!, !open)}
+              onClick={() => fold(s.title!, !open)}
               aria-expanded={open}
               aria-controls={listId}
-              aria-disabled={pinned || undefined}
-              title={pinned ? "This section holds the page you're on" : undefined}
-              className={cx("flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-plum-300/80 uppercase", pinned ? "cursor-default" : "hover:bg-white/5 hover:text-white")}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-plum-300/80 uppercase hover:bg-white/5 hover:text-white"
             >
               <span className="flex-1 text-left">{s.title}</span>
               {!open && waiting > 0 && <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-bold tracking-normal text-plum-950">{waiting}</span>}
-              {!pinned && <ChevronDown className={cx("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden />}
+              <ChevronDown className={cx("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden />
             </button>
           )}
           {open && (
