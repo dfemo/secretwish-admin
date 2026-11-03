@@ -54,7 +54,8 @@ export async function api<T = unknown>(path: string, init?: { method?: string; b
     const errors = data?.errors as Record<string, string[]> | undefined;
     const first = errors ? Object.values(errors)[0]?.[0] : undefined;
     const message =
-      res.status === 429 ? "Too many attempts. Please wait a minute and try again." : (data?.detail ?? first ?? data?.title ?? `Request failed (${res.status})`);
+      // 429s carry how long to wait in their detail.
+      res.status === 429 ? (data?.detail ?? "Too many attempts. Please wait a minute and try again.") : (data?.detail ?? first ?? data?.title ?? `Request failed (${res.status})`);
     throw new ApiError(message, res.status, errors);
   }
   return data as T;

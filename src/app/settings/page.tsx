@@ -63,7 +63,7 @@ export default function SettingsPage() {
           <fieldset disabled={!editable} className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Code lifetime (hours)">{(id) => <Input id={id} type="number" value={form.verificationCodeTtlHours} onChange={num("verificationCodeTtlHours")} />}</Field>
             <Field label="Max attempts before lockout" error={errs.attempts}>{(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.verificationMaxAttempts} onChange={num("verificationMaxAttempts")} />}</Field>
-            <p className="text-xs text-ink-500 sm:col-span-2">Lockout lasts 15 minutes; requests are also rate-limited to 10 per minute per user at the API.</p>
+            <p className="text-xs text-ink-500 sm:col-span-2">Lockout lasts an hour; requests are also rate-limited to 10 per minute per user at the API.</p>
           </fieldset>
           {editable && (
             <div className="flex justify-end gap-2 border-t border-ink-100 px-5 py-3">
