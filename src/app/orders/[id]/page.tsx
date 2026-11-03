@@ -21,7 +21,8 @@ type Detail = {
   lines: { productName: string; emoji: string; quantity: number; unitPrice: number; customisation: string; total: number }[];
   money: { subtotal: number; deliveryFee: number; tax: number; discount: number; total: number; platformFee: number; vendorNet: number; fxRateNgn: number };
   gift: { giftMessage: string; personalisation: string; revealSender: boolean; discreetPackaging: boolean; hidePriceFromRecipient: boolean; budgetMin: number; budgetMax: number; viaWishlist: boolean };
-  delivery: { deliveryOption: string; deliveryDate: string | null; trackingReference: string | null; courier: string | null; deliveryEvidence: string | null; deliveredAt: string | null };
+  recipient: { onSecretWish: boolean; invitedAt: string | null; senderCanConfirm: boolean };
+  delivery: { deliveryOption: string; deliveryDate: string | null; trackingReference: string | null; courier: string | null; deliveryEvidence: string | null; deliveredAt: string | null; senderApprovedAt: string | null };
   verification: { state: string; attempts: number; maxAttempts: number; expiresAt: string } | null;
   events: { id: string; at: string; title: string; detail: string; actor: string; internal: boolean }[];
   payments: { id: string; at: string; kind: string; amount: number; status: string; provider: string; providerReference: string; method: string; failureReason?: string }[];
@@ -252,6 +253,10 @@ export default function OrderDetailPage() {
               <Stat label="Courier" value={d.delivery.courier ?? "—"} />
               <Stat label="Tracking" value={<span className="font-mono text-xs">{d.delivery.trackingReference ?? "—"}</span>} />
               <Stat className="col-span-2" label="Delivery evidence" value={d.delivery.deliveryEvidence ?? "—"} />
+              {d.delivery.deliveredAt && <Stat className="col-span-2" label="Sender confirmed satisfied" value={d.delivery.senderApprovedAt ? `${dateTime(d.delivery.senderApprovedAt)} · payout hold lifted` : "Not yet · payout waits for the hold period"} />}
+              <Stat className="col-span-2" label="Who confirms delivery" value={d.recipient.onSecretWish ? "Recipient, with their secret code (or staff with evidence)" : "Sender marks it received (or staff with evidence)"} />
+              {d.recipient.senderCanConfirm && <p className="col-span-2 text-xs text-ink-500">The recipient isn&apos;t on SecretWish, so the sender can mark this order received. Once either of you confirms, the other option disappears.</p>}
+              {d.recipient.invitedAt && <Stat className="col-span-2" label="Recipient invited to join" value={dateTime(d.recipient.invitedAt)} />}
               {d.verification && (
                 <Stat
                   className="col-span-2"

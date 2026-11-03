@@ -9,6 +9,7 @@ import { BarsChart, ChartCard, chartColors, DonutChart, Legend } from "@/shared/
 
 type Report = {
   from: string; to: string;
+  sampleData: boolean;
   metrics: Record<string, number>;
   weeks: { week: string; gmv: number; revenue: number; orders: number }[];
   categories: { category: string; orders: number; gmv: number }[];
@@ -51,7 +52,7 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports & Analytics" description="Consistent definitions over one date range. Hover a metric or read the glossary below for its exact definition." actions={<SampleDataBadge />} />
+      <PageHeader title="Reports & Analytics" description="Consistent definitions over one date range. Hover a metric or read the glossary below for its exact definition." actions={data?.sampleData ? <SampleDataBadge /> : undefined} />
       <Card className="mb-6">
         <form
           className="flex flex-wrap items-end gap-3 p-4"

@@ -15,7 +15,7 @@ type Pipeline = {
   vendor: { id: string; name: string; status: string };
   eligibleOrders: number; gross: number; fees: number; net: number;
   blocked: { reason: string; count: number; amount: number }[];
-  orders: { id: string; reference: string; status: string; deliveredAt?: string; deliveryEvidence?: string; net: number; eligible: boolean; reason: string }[];
+  orders: { id: string; reference: string; status: string; deliveredAt?: string; deliveryEvidence?: string; senderApprovedAt?: string | null; net: number; eligible: boolean; reason: string }[];
 };
 type Payout = { id: string; reference: string; vendor: string; vendorId: string; orderReferences: string[]; gross: number; fees: number; adjustments: number; deductions: number; net: number; status: string; providerStatus: string; providerReference?: string; reconciliation: string; createdAt: string; paidAt?: string };
 type Data = { rules: { payoutHoldDays: number; requireDeliveryEvidenceForPayout: boolean; commissionRate: number }; pipeline: Pipeline[]; payouts: Payout[] };
@@ -115,7 +115,7 @@ export default function PayoutsPage() {
                           <tr key={o.id} className="border-t border-ink-200/60">
                             <td className="py-2"><Link href={`/orders/${o.id}`} className="font-semibold text-plum-700 hover:underline">{o.reference}</Link></td>
                             <td className="py-2"><StatusBadge status={o.status} /></td>
-                            <td className="py-2 text-xs">{date(o.deliveredAt)}</td>
+                            <td className="py-2 text-xs">{date(o.deliveredAt)}{o.senderApprovedAt && <span className="block font-semibold text-success-700">Sender confirmed {date(o.senderApprovedAt)}</span>}</td>
                             <td className="max-w-[200px] truncate py-2 text-xs">{o.deliveryEvidence ?? "—"}</td>
                             <td className="py-2 text-right tabular">{fmt(o.net)}</td>
                             <td className="py-2 pl-4">{o.eligible ? <StatusBadge status="Eligible" /> : <span className="text-xs text-ink-500">{o.reason}</span>}</td>

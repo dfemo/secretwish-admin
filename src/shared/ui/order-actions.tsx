@@ -19,6 +19,8 @@ const specs: Record<string, Spec> = {
   redispatch: { fields: ["tracking"] },
   "report-issue": { fields: ["note"], noteLabel: "What went wrong?", tone: "danger" },
   "confirm-delivery": { fields: ["evidence"], help: "Delivery must be backed by evidence (e.g. courier proof-of-delivery). It does not by itself make the order payable." },
+  "confirm-received": { fields: [], help: "Confirm the recipient has the gift. They aren't on SecretWish, so they can't confirm it themselves. This marks the order delivered and tells the vendor." },
+  "confirm-satisfied": { fields: [], help: "Tell us the gift arrived as expected. The vendor can then be paid straight away instead of after the usual hold period. After this you'd need to contact support to report a problem." },
   "request-refund": { fields: ["note"], noteLabel: "Reason for the refund", tone: "danger", consequential: true },
   cancel: { fields: ["note"], noteLabel: "Reason for cancelling", tone: "danger", consequential: true, help: "If payment was already taken, a refund case is opened instead." },
   "fraud-hold": { fields: ["note"], noteLabel: "Reason for the hold", tone: "danger", consequential: true, help: "Blocks payout eligibility until released." },

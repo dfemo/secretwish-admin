@@ -26,6 +26,7 @@ type Detail = {
   recipient: {
     name: string; phone: string | null; address: string | null; city: string; deliveryDate: string | null; viaWishlist: boolean;
     giftMessage: string | null; discreetPackaging: boolean | null; revealSender: boolean | null; collected: boolean; masked: boolean;
+    email: string | null; onSecretWish: boolean; invitedAt: string | null;
   };
   quotes: QuoteRow[];
   chosen: { quoteId: string; vendor: { id: string; name: string; city: string }; priceUsd: number } | null;
@@ -245,6 +246,9 @@ export default function RequestDetailPage() {
             <dl className="grid grid-cols-2 gap-4 p-5">
               <Stat label="Name" value={d.recipient.name} />
               <Stat label="City" value={d.recipient.city} />
+              <Stat className="col-span-2" label="Email" value={<span className="break-all">{d.recipient.email ?? "—"}</span>} />
+              <Stat label="On SecretWish" value={d.recipient.onSecretWish || d.recipient.viaWishlist ? "Yes" : "No"} />
+              <Stat label="Invited to join" value={d.recipient.invitedAt ? dateTime(d.recipient.invitedAt) : "—"} />
               {d.recipient.collected && (
                 <>
                   <Stat label="Phone" value={d.recipient.phone || "—"} />

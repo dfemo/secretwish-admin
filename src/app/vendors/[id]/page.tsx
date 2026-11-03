@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Mail, UserRound } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
@@ -14,6 +14,8 @@ import { KycReview, type Kyc } from "./kyc-review";
 
 type Detail = {
   vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string };
+  /** The people who sign in to run this store. */
+  accounts: { id: string; name: string; email: string | null; emailConfirmed: boolean; phone: string | null; createdAt: string }[];
   kyc: Kyc;
   products: { id: string; name: string; emoji: string; tint: string; priceUsd: number; status: string; stock: number; reviewNote?: string }[];
   stats: { orders: number; gmv: number; delivered: number; exceptions: number; refunds: number };
@@ -60,6 +62,42 @@ export default function VendorDetailPage() {
             <p className="text-sm text-ink-500">
               {v.primaryCategory} · {v.city} · {v.contactName} · {v.plan} · applied {date(v.appliedAt)}
             </p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <a href={`mailto:${v.email}`} className="inline-flex items-center gap-1.5 font-semibold text-plum-700 hover:underline">
+                <Mail className="size-4" aria-hidden /> {v.email}
+              </a>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-plum-700"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(v.email);
+                    toast({ tone: "success", title: "Email copied" });
+                  } catch {
+                    toast({ tone: "error", title: "Couldn't copy", body: v.email });
+                  }
+                }}
+              >
+                <Copy className="size-3.5" aria-hidden /> Copy
+              </button>
+            </p>
+            {data.accounts.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-xs text-ink-500" aria-label="Accounts that sign in to this store">
+                {data.accounts.map((a) => (
+                  <li key={a.id} className="flex flex-wrap items-center gap-1.5">
+                    <UserRound className="size-3.5" aria-hidden /> Signs in as {a.name}
+                    {a.email && (
+                      <>
+                        {" · "}
+                        <a href={`mailto:${a.email}`} className="font-semibold text-plum-700 hover:underline">{a.email}</a>
+                        {!a.emailConfirmed && <span className="text-warning-700">(not verified)</span>}
+                      </>
+                    )}
+                    {a.phone && ` · ${a.phone}`}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

@@ -12,6 +12,8 @@ import { BarsChart, ChartCard, chartColors, DonutChart, Legend, TrendChart } fro
 
 type Overview = {
   days: number;
+  /** True while seeded sample people or stores are still in the database, so these figures include them. */
+  sampleData: boolean;
   kpis: {
     totalOrders: number; totalOrdersDelta: number; gmv: number; gmvDelta: number; netRevenue: number; netRevenueDelta: number;
     vendorEarnings: number; refunded: number; taxCollected: number; requiringAttention: number; pendingFulfilment: number;
@@ -46,7 +48,7 @@ export default function OverviewPage() {
         description="Marketplace health at a glance. GMV, SecretWish revenue and vendor earnings are reported separately."
         actions={
           <>
-            <SampleDataBadge />
+            {data.sampleData && <SampleDataBadge />}
             <label className="sr-only" htmlFor="range">
               Date range
             </label>

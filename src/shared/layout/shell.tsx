@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bell, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
-import { AUTH_URL, useSession } from "../lib/session";
+import { AUTH_URL, isSampleEmail, useSession } from "../lib/session";
 import { currencySymbol, timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
@@ -163,6 +163,9 @@ function PersonaMenu({ subtitle }: { subtitle: string }) {
 
 // ---------------- Sidebar shell (Admin & Vendor) ----------------
 export function SidebarShell({ sections, children, suffix, subtitle, searchPlaceholder, onSearch }: { sections: NavSection[]; children: ReactNode; suffix: string; subtitle: string; searchPlaceholder?: string; onSearch?: (q: string) => void }) {
+  // Only demo personas and the seeded sample accounts are looking at sample data; a real account sees its own.
+  const { isDemo, persona } = useSession();
+  const sample = isDemo || isSampleEmail(persona.email);
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -277,9 +280,11 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
             <div className="flex-1" />
           )}
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            <Badge tone="gold" className="hidden lg:inline-flex">
-              Sample data
-            </Badge>
+            {sample && (
+              <Badge tone="gold" className="hidden lg:inline-flex">
+                Sample data
+              </Badge>
+            )}
             <CurrencyToggle />
             <NotificationBell />
             <PersonaMenu subtitle={subtitle} />

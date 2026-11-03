@@ -10,6 +10,9 @@ import { VendorVerification } from "../ui/vendor-kyc";
 
 export type AppName = "admin" | "sender" | "recipient" | "vendor";
 /** Who is signed in, as this app sees them. `role` is the capacity they act in here (their staff role in Admin). */
+/** Seeded sample people and stores use reserved example addresses that real sign-ups can't receive email at. */
+export const isSampleEmail = (email: string | null | undefined) => !!email && /(@example\.com|\.example)$/i.test(email);
+
 export type Persona = { id: string; name: string; email: string; role: string; city: string; vendorName?: string | null };
 export type Meta = {
   categories: { id: string; name: string; slug: string; emoji: string }[];
