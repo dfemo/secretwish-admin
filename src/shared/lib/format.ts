@@ -29,25 +29,36 @@ export function currencySymbol(currency: Currency) {
   return new Intl.NumberFormat(locales[currency] ?? "en-US", { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
 }
 
-/** A sensible default currency from where the browser says it is (time zone first, then language region). */
+/** A sensible default currency from where the browser says it is (time zone first, then language region), among the currencies
+ * SecretWish offers. It knows more currencies than the defaults, so a currency staff add later becomes the default where it's used. */
 export function guessCurrency(available: string[]): Currency {
   const byZone: Record<string, string> = {
-    "Africa/Lagos": "NGN", "Africa/Accra": "GHS", "Africa/Nairobi": "KES", "Africa/Johannesburg": "ZAR", "Europe/London": "GBP",
-    "America/Toronto": "CAD", "America/Vancouver": "CAD",
+    "Africa/Lagos": "NGN", "Africa/Accra": "GHS", "Africa/Nairobi": "KES", "Africa/Johannesburg": "ZAR", "Africa/Cairo": "EGP",
+    "Africa/Casablanca": "MAD", "Africa/Kampala": "UGX", "Africa/Dar_es_Salaam": "TZS", "Africa/Kigali": "RWF", "Africa/Addis_Ababa": "ETB",
+    "Africa/Lusaka": "ZMW", "Africa/Harare": "USD", "Africa/Douala": "XAF", "Africa/Libreville": "XAF", "Africa/Dakar": "XOF",
+    "Africa/Abidjan": "XOF", "Africa/Lome": "XOF", "Africa/Porto-Novo": "XOF", "Africa/Bamako": "XOF", "Africa/Ouagadougou": "XOF",
+    "Africa/Monrovia": "LRD", "Africa/Freetown": "SLE", "Africa/Banjul": "GMD",
+    "Europe/London": "GBP", "Europe/Zurich": "CHF", "Asia/Dubai": "AED", "Asia/Riyadh": "SAR", "Asia/Kolkata": "INR",
+    "America/Toronto": "CAD", "America/Vancouver": "CAD", "Australia/Sydney": "AUD", "Australia/Melbourne": "AUD",
   };
-  const byRegion: Record<string, string> = { NG: "NGN", GH: "GHS", KE: "KES", ZA: "ZAR", GB: "GBP", CA: "CAD", US: "USD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR" };
-  let guess: string | undefined;
+  const byRegion: Record<string, string> = {
+    NG: "NGN", GH: "GHS", KE: "KES", ZA: "ZAR", EG: "EGP", MA: "MAD", UG: "UGX", TZ: "TZS", RW: "RWF", ET: "ETB", ZM: "ZMW",
+    CM: "XAF", GA: "XAF", SN: "XOF", CI: "XOF", TG: "XOF", BJ: "XOF", ML: "XOF", BF: "XOF", LR: "LRD", SL: "SLE", GM: "GMD",
+    GB: "GBP", CA: "CAD", US: "USD", AU: "AUD", AE: "AED", SA: "SAR", IN: "INR", CH: "CHF",
+    IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR", BE: "EUR", PT: "EUR",
+  };
+  // Most specific first; the first one SecretWish offers wins.
+  const candidates: (string | undefined)[] = [];
   try {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    guess = byZone[zone] ?? (zone.startsWith("Europe/") ? "EUR" : undefined);
-    if (!guess) {
-      const region = new Intl.Locale(navigator.language).maximize().region;
-      guess = region ? byRegion[region] : undefined;
-    }
+    candidates.push(byZone[zone]);
+    const region = new Intl.Locale(navigator.language).maximize().region;
+    candidates.push(region ? byRegion[region] : undefined);
+    if (zone.startsWith("Europe/")) candidates.push("EUR");
   } catch {
     /* fall through to the default */
   }
-  return guess && available.includes(guess) ? guess : available.includes("NGN") ? "NGN" : "USD";
+  return candidates.find((c): c is string => !!c && available.includes(c)) ?? (available.includes("NGN") ? "NGN" : "USD");
 }
 
 export function number(n: number | null | undefined) {
