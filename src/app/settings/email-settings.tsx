@@ -11,6 +11,9 @@ type Provider = "Resend" | "Postmark" | "SendGrid" | "Mailgun";
 type EmailSettings = {
   provider: Provider;
   from: string;
+  /** While "from" is Resend's test sender, every email goes to this inbox; redirecting = that's happening now. */
+  testRecipient: string | null;
+  redirecting: boolean;
   saved: { resend: string | null; postmark: string | null; sendGrid: string | null; mailgun: string | null };
   mailgunDomain: string | null;
   mailgunRegion: string;
@@ -27,21 +30,25 @@ const providers: { value: Provider; label: string; secretLabel: string; secretKe
   { value: "Mailgun", label: "Mailgun", secretLabel: "API key", secretKey: "mailgunApiKey", savedKey: "mailgun", help: "mailgun.com → API Security. Use the sending domain you verified in Mailgun." },
 ];
 
+type TestResult = { provider: string; fellBack: boolean; outbox: boolean; to: string; redirected?: boolean };
+
 /** Admin → Settings: choose which service sends SecretWish email. Resend is the default and the fallback if the chosen one fails. */
 export function EmailDeliverySettings() {
   const { data, error, loading, reload } = useApi<EmailSettings>("/admin/settings/email");
   const toast = useToast();
   const [provider, setProvider] = useState<Provider>("Resend");
   const [from, setFrom] = useState("");
+  const [testRecipient, setTestRecipient] = useState("");
   const [secret, setSecret] = useState("");
   const [resendKey, setResendKey] = useState("");
   const [domain, setDomain] = useState("");
   const [region, setRegion] = useState("US");
-  const [test, setTest] = useState<{ provider: string; fellBack: boolean; outbox: boolean; to: string } | null>(null);
+  const [test, setTest] = useState<TestResult | null>(null);
   useEffect(() => {
     if (!data) return;
     setProvider(data.provider);
     setFrom(data.from);
+    setTestRecipient(data.testRecipient ?? "");
     setDomain(data.mailgunDomain ?? "");
     setRegion(data.mailgunRegion ?? "US");
   }, [data]);
@@ -51,7 +58,7 @@ export function EmailDeliverySettings() {
     api("/admin/settings/email", {
       method: "PUT",
       body: {
-        provider, from,
+        provider, from, testRecipient,
         [meta.secretKey]: secret || null,
         ...(provider !== "Resend" ? { resendApiKey: resendKey || null } : {}),
         mailgunDomain: provider === "Mailgun" ? domain : null,
@@ -59,11 +66,12 @@ export function EmailDeliverySettings() {
       },
     }),
   );
-  const sendTest = useMutation(() => api<{ provider: string; fellBack: boolean; outbox: boolean; to: string }>("/admin/settings/email/test", { method: "POST" }));
+  const sendTest = useMutation(() => api<TestResult>("/admin/settings/email/test", { method: "POST" }));
 
   if (loading) return <Card className="mt-6"><Spinner /></Card>;
   if (error || !data) return <Card className="mt-6"><ErrorState error={error} onRetry={reload} /></Card>;
   const ready = data.ready.includes(provider);
+  const testSender = /@resend\.dev>?\s*$/i.test(from.trim());
 
   return (
     <Card className="mt-6">
@@ -83,6 +91,18 @@ export function EmailDeliverySettings() {
         <Field label="Send from" hint="e.g. SecretWish <no-reply@mail.secretwish.com>, on a domain verified with the provider.">
           {(id, d) => <Input id={id} aria-describedby={d} value={from} onChange={(e) => setFrom(e.target.value)} />}
         </Field>
+        {testSender && (
+          <>
+            <Notice className="sm:col-span-2" tone="warning" title="Sending from Resend's test address">
+              onboarding@resend.dev only delivers to the email your Resend account uses, so every SecretWish email (sign-in codes, invites, thank-yous)
+              goes to the test inbox below instead, marked with who it was for. Verify your domain at resend.com/domains and change “Send from” to
+              an address on it to email people directly.
+            </Notice>
+            <Field label="Test inbox" hint="The email address of your Resend account.">
+              {(id, d) => <Input id={id} aria-describedby={d} type="email" value={testRecipient} onChange={(e) => setTestRecipient(e.target.value)} placeholder="you@example.com" />}
+            </Field>
+          </>
+        )}
         <Field label={`${meta.label.replace(" (default)", "")} ${meta.secretLabel}`} hint={data.saved[meta.savedKey] ? `Saved (${data.saved[meta.savedKey]}). Leave blank to keep it.` : meta.help}>
           {(id, d) => <Input id={id} aria-describedby={d} type="password" autoComplete="off" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={data.saved[meta.savedKey] ? "••••••••" : "Paste the key"} />}
         </Field>
@@ -100,7 +120,7 @@ export function EmailDeliverySettings() {
         {!ready && !secret && <Notice className="sm:col-span-2" tone="warning">{meta.value} has no credentials yet, so email will go through Resend{data.ready.includes("Resend") ? "" : " — which isn't set up either, so codes only appear in the server logs"}.</Notice>}
         {test && (
           <Notice className="sm:col-span-2" tone={test.outbox ? "warning" : test.fellBack ? "warning" : "success"}>
-            {test.outbox ? `No provider is set up, so the test went to the server logs only.` : test.fellBack ? `${provider} failed, so the test was sent to ${test.to} through the Resend fallback. Check the ${provider} key.` : `Test email sent to ${test.to} via ${test.provider}.`}
+            {test.outbox ? `No provider is set up, so the test went to the server logs only.` : test.fellBack ? `${provider} failed, so the test was sent to ${test.to} through the Resend fallback. Check the ${provider} key.` : `Test email sent to ${test.to} via ${test.provider}${test.redirected ? " (the test inbox)" : ""}.`}
           </Notice>
         )}
         {(save.error || sendTest.error) && <Notice className="sm:col-span-2" tone="danger">{(save.error ?? sendTest.error)!.message}</Notice>}
