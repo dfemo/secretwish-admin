@@ -8,16 +8,18 @@ import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
 import { date, dateTime, pct } from "@/shared/lib/format";
-import { Avatar, Button, Card, CardHeader, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
+import { Avatar, Button, Card, CardHeader, cx, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { KycReview, type Kyc } from "./kyc-review";
+
+type Listing = { id: string; name: string; description?: string; category?: string; emoji: string; tint: string; priceUsd: number; status: string; stock: number; reviewNote?: string };
 
 type Detail = {
   vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string };
   /** The people who sign in to run this store. */
   accounts: { id: string; name: string; email: string | null; emailConfirmed: boolean; phone: string | null; createdAt: string }[];
   kyc: Kyc;
-  products: { id: string; name: string; emoji: string; tint: string; priceUsd: number; status: string; stock: number; reviewNote?: string }[];
+  products: Listing[];
   stats: { orders: number; gmv: number; delivered: number; exceptions: number; refunds: number };
   recentOrders: { id: string; reference: string; createdAt: string; status: string; total: number; product: string }[];
   payouts: { id: string; reference: string; net: number; status: string; createdAt: string; reconciliation: string }[];
@@ -39,12 +41,18 @@ export default function VendorDetailPage() {
   const toast = useToast();
   const [decision, setDecision] = useState<string | null>(null);
   const decide = useMutation((d: string, reason: string) => api(`/admin/vendors/${id}/decision`, { method: "POST", body: { decision: d, reason } }));
+  const [review, setReview] = useState<{ product: Listing; decision: "approve" | "reject" | "suspend" } | null>(null);
+  const reviewListing = useMutation((pid: string, d: string, reason: string) => api(`/admin/products/${pid}/review`, { method: "POST", body: { decision: d, reason } }));
 
   if (loading) return <PageSkeleton />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const v = data.vendor;
   const available = v.status === "Pending" ? ["approve", "reject"] : v.status === "Approved" ? ["suspend"] : v.status === "Suspended" ? ["reinstate"] : ["approve"];
   const canDecide = can("vendors.manage");
+  const canReview = can("products.review");
+  // Listings waiting for review first, so they can be approved here without the review queue.
+  const listings = [...data.products].sort((a, b) => Number(b.status === "PendingReview") - Number(a.status === "PendingReview"));
+  const pending = listings.filter((p) => p.status === "PendingReview").length;
 
   return (
     <>
@@ -144,21 +152,60 @@ export default function VendorDetailPage() {
           )}
         </div>
         <Card>
-          <CardHeader title="Listings" description="Review quality before products go live" action={<Link href="/products" className="text-xs font-semibold text-plum-700 hover:underline">Review queue</Link>} />
+          <CardHeader
+            title={`Listings (${listings.length})`}
+            description={pending > 0 ? `${pending} waiting for review. Check quality before they go live.` : "Review quality before products go live"}
+            action={<Link href="/products" className="text-xs font-semibold text-plum-700 hover:underline">Review queue</Link>}
+          />
+          {listings.length === 0 && <p className="px-5 pb-5 text-sm text-ink-500">No listings yet.</p>}
           <ul className="grid gap-2 p-4 sm:grid-cols-2">
-            {data.products.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 rounded-xl border border-ink-100 p-2.5">
-                <ProductArt emoji={p.emoji} tint={p.tint} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold">{p.name}</p>
-                  <p className="text-xs text-ink-500">
-                    {fmt(p.priceUsd)} · {p.stock} in stock
-                  </p>
+            {listings.map((p) => (
+              <li key={p.id} className={cx("rounded-xl border p-2.5", p.status === "PendingReview" ? "border-gold-300 bg-gold-100/30" : "border-ink-100")}>
+                <div className="flex items-center gap-3">
+                  <ProductArt emoji={p.emoji} tint={p.tint} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold">{p.name}</p>
+                    <p className="text-xs text-ink-500">
+                      {fmt(p.priceUsd)} · {p.stock} in stock{p.category && ` · ${p.category}`}
+                    </p>
+                  </div>
+                  <StatusBadge status={p.status} />
                 </div>
-                <StatusBadge status={p.status} />
+                {p.description && <p className="mt-2 line-clamp-2 text-xs text-ink-700">{p.description}</p>}
+                {p.reviewNote && <p className="mt-2 rounded-lg bg-warning-50 px-2 py-1 text-xs text-warning-700">{p.reviewNote}</p>}
+                {canReview && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {p.status === "PendingReview" && (
+                      <>
+                        <Button size="sm" onClick={() => setReview({ product: p, decision: "approve" })}>Approve</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setReview({ product: p, decision: "reject" })}>Reject</Button>
+                      </>
+                    )}
+                    {p.status === "Approved" && <Button size="sm" variant="ghost" onClick={() => setReview({ product: p, decision: "suspend" })}>Suspend listing</Button>}
+                    {(p.status === "Suspended" || p.status === "Rejected") && <Button size="sm" variant="subtle" onClick={() => setReview({ product: p, decision: "approve" })}>Approve</Button>}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
+          <ConfirmDialog
+            open={!!review}
+            onClose={() => { setReview(null); reviewListing.setError(null); }}
+            title={review ? `${review.decision === "approve" ? "Approve" : review.decision === "reject" ? "Reject" : "Suspend"} “${review.product.name}”` : ""}
+            tone={review?.decision === "approve" ? "primary" : "danger"}
+            reasonLabel={review?.decision === "approve" ? undefined : "Feedback for the vendor"}
+            description={review?.decision === "approve" ? (review.product.stock > 0 ? "The listing will be visible to senders and recipients immediately." : "It has no stock, so it will show as out of stock until the vendor adds some.") : "The vendor sees your feedback and is notified."}
+            confirmLabel={review?.decision === "approve" ? "Approve listing" : review?.decision === "reject" ? "Reject listing" : "Suspend listing"}
+            pending={reviewListing.pending}
+            error={reviewListing.error?.message}
+            onConfirm={async (reason) => {
+              if (review && (await reviewListing.run(review.product.id, review.decision, reason)) !== undefined) {
+                toast({ tone: "success", title: `Listing ${review.decision === "approve" ? "approved" : review.decision === "reject" ? "rejected" : "suspended"}`, body: "The vendor has been notified." });
+                setReview(null);
+                reload();
+              }
+            }}
+          />
         </Card>
       </div>
 
