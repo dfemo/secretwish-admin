@@ -252,7 +252,7 @@ export default function OrderDetailPage() {
             <CardHeader title="Delivery" />
             <dl className="grid grid-cols-2 gap-4 p-5">
               <Stat label="Option" value={d.delivery.deliveryOption} />
-              <Stat label="Delivered by" value={d.delivery.viaHub ? <Link href="/hub" className="font-semibold text-plum-700 hover:underline">SecretWish (via the hub)</Link> : "The vendor's courier"} />
+              <Stat label={d.delivery.deliveredAt ? "Delivered by" : "To be delivered by"} value={d.delivery.viaHub ? <Link href="/hub" className="font-semibold text-plum-700 hover:underline">A SecretWish agent (via the hub)</Link> : "The vendor's courier"} />
               {d.delivery.hubReceivedAt && <Stat label="Received at hub" value={`${dateTime(d.delivery.hubReceivedAt)}${d.delivery.hubReceivedBy ? ` by ${d.delivery.hubReceivedBy}` : ""}`} />}
               {d.delivery.hubReadyAt && <Stat label="Out for delivery" value={dateTime(d.delivery.hubReadyAt)} />}
               {(d.delivery.monitoredBy || d.delivery.lastCheckAt) && (

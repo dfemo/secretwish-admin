@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Copy, Mail, UserRound } from "lucide-react";
+import { ArrowLeft, Clock, Copy, Mail, UserRound } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
 import { date, dateTime, pct } from "@/shared/lib/format";
-import { Avatar, Button, Card, CardHeader, cx, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
+import { Avatar, Badge, Button, Card, CardHeader, cx, ErrorState, KpiCard, Notice, PageSkeleton, ProductArt, StatusBadge } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { KycReview, type Kyc } from "./kyc-review";
+import { autoApproveLabel, ListingApproval, type ApprovalMode } from "./listing-approval";
 
-type Listing = { id: string; name: string; description?: string; category?: string; emoji: string; tint: string; images?: string[]; priceUsd: number; status: string; stock: number; reviewNote?: string };
+type Listing = { id: string; name: string; description?: string; category?: string; emoji: string; tint: string; images?: string[]; autoApproveAt?: string | null; priceUsd: number; status: string; stock: number; reviewNote?: string };
 
 type Detail = {
-  vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string };
+  vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string; productApproval?: ApprovalMode };
   /** The people who sign in to run this store. */
   accounts: { id: string; name: string; email: string | null; emailConfirmed: boolean; phone: string | null; createdAt: string }[];
   kyc: Kyc;
@@ -151,6 +152,8 @@ export default function VendorDetailPage() {
             </Card>
           )}
         </div>
+        <div className="space-y-6">
+        <ListingApproval vendorId={v.id} mode={v.productApproval ?? "Manual"} canEdit={canDecide} onSaved={reload} />
         <Card>
           <CardHeader
             title={`Listings (${listings.length})`}
@@ -172,6 +175,7 @@ export default function VendorDetailPage() {
                   <StatusBadge status={p.status} />
                 </div>
                 {p.description && <p className="mt-2 line-clamp-2 text-xs text-ink-700">{p.description}</p>}
+                {p.status === "PendingReview" && autoApproveLabel(p.autoApproveAt) && <Badge tone="gold" icon={Clock} className="mt-2">{autoApproveLabel(p.autoApproveAt)}</Badge>}
                 {p.reviewNote && <p className="mt-2 rounded-lg bg-warning-50 px-2 py-1 text-xs text-warning-700">{p.reviewNote}</p>}
                 {canReview && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -207,6 +211,7 @@ export default function VendorDetailPage() {
             }}
           />
         </Card>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

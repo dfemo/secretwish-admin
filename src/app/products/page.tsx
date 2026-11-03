@@ -7,10 +7,11 @@ import { Boxes } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
-import { Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, ProductArt, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, ProductArt, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
+import { autoApproveLabel } from "@/app/vendors/[id]/listing-approval";
 
-type Product = { id: string; name: string; description: string; priceUsd: number; stock: number; emoji: string; tint: string; images?: string[]; status: string; reviewNote?: string; category: string; categoryId: string; deliveryOptions: string[]; vendor: { id: string; name: string } };
+type Product = { id: string; name: string; description: string; priceUsd: number; stock: number; emoji: string; tint: string; images?: string[]; autoApproveAt?: string | null; status: string; reviewNote?: string; category: string; categoryId: string; deliveryOptions: string[]; vendor: { id: string; name: string } };
 
 function ProductsInner() {
   const params = useSearchParams();
@@ -104,6 +105,7 @@ function ProductsInner() {
                   <p className="mt-2 text-xs text-ink-500">
                     <b className="text-base text-ink-900">{fmt(p.priceUsd)}</b> · {p.stock} in stock · {p.deliveryOptions.join(", ")}
                   </p>
+                  {p.status === "PendingReview" && autoApproveLabel(p.autoApproveAt) && <Badge tone="gold" className="mt-2">{autoApproveLabel(p.autoApproveAt)}</Badge>}
                   {p.reviewNote && <p className="mt-2 rounded-lg bg-warning-50 px-2 py-1 text-xs text-warning-700">{p.reviewNote}</p>}
                   <div className="mt-auto flex flex-wrap gap-2 pt-4">
                     {p.status === "PendingReview" && (
