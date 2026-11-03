@@ -1,21 +1,27 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Gift } from "lucide-react";
 import { usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date } from "@/shared/lib/format";
-import { Badge, Card, EmptyState, ErrorState, KpiCard, PageHeader, SearchInput, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
+import { Badge, Card, EmptyState, ErrorState, KpiCard, PageHeader, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
 
-type Wishlist = { id: string; title: string; occasion: string; eventDate: string; visibility: string; createdAt: string; owner: string; items: number; fulfilled: number };
+type Wishlist = {
+  id: string; title: string; occasion: string; eventDate: string; visibility: string; createdAt: string; owner: string; items: number; fulfilled: number;
+  gifts: number; gifters: number; state: "Open" | "Fulfilled" | "Closed";
+};
 type Campaign = { id: string; reference: string; title: string; budgetMin: number; budgetMax: number; status: string; createdAt: string; deliveryCity: string; category: string; sender: string; quotes: number; overBudgetQuotes: number };
 
 const n = (v: number | undefined) => (v === undefined ? "…" : v >= 10000 ? "10,000+" : v.toLocaleString());
 
 export default function WishlistsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"wishlists" | "campaigns">("wishlists");
-  const { data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Wishlist & Campaign>("/admin/wishlists", { tab }, 25);
+  const [state, setState] = useState("");
+  const { data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Wishlist & Campaign>("/admin/wishlists", { tab, state: tab === "wishlists" ? state : "" }, 25);
   const { fmt } = useSession();
   const c = data?.counts;
 
@@ -24,7 +30,9 @@ export default function WishlistsPage() {
     { key: "o", header: "Occasion", render: (w) => w.occasion ?? "—" },
     { key: "d", header: "Event date", render: (w) => date(w.eventDate) },
     { key: "v", header: "Visibility", render: (w) => <StatusBadge status={w.visibility} /> },
-    { key: "i", header: "Gifted", align: "right", render: (w) => `${w.fulfilled} / ${w.items}` },
+    { key: "i", header: "Wishes gifted", align: "right", render: (w) => `${w.fulfilled} / ${w.items}` },
+    { key: "g", header: "Gifts · gifters", align: "right", render: (w) => (<span>{w.gifts} · {w.gifters}{w.gifters > 1 && <Badge tone="plum" className="ml-1.5">Multiple</Badge>}</span>) },
+    { key: "st", header: "State", render: (w) => <Badge tone={w.state === "Closed" ? "neutral" : w.state === "Fulfilled" ? "success" : "plum"}>{w.state}</Badge> },
     { key: "c", header: "Created", hideOnMobile: true, render: (w) => date(w.createdAt) },
   ];
   const cCols: Column<Campaign>[] = [
@@ -48,15 +56,24 @@ export default function WishlistsPage() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-100 p-4">
           <Tabs value={tab} onChange={setTab} tabs={[{ value: "wishlists", label: "Wishlists", count: c?.wishlists }, { value: "campaigns", label: "Surprise requests", count: c?.campaigns }]} />
-          <SearchInput value={search} onChange={setSearch} label="Search" placeholder={tab === "wishlists" ? "Title or owner" : "Title, reference or sender"} className="sm:w-72" />
+          <div className="flex flex-wrap items-center gap-2">
+            {tab === "wishlists" && (
+              <Select aria-label="State" value={state} onChange={(e) => setState(e.target.value)} className="w-40">
+                <option value="">All lists</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed{c?.closed != null ? ` (${n(c.closed)})` : ""}</option>
+              </Select>
+            )}
+            <SearchInput value={search} onChange={setSearch} label="Search" placeholder={tab === "wishlists" ? "Title or owner" : "Title, reference or sender"} className="sm:w-72" />
+          </div>
         </div>
         {loading && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
         {data &&
           (tab === "wishlists" ? (
-            <DataTable caption="Wishlists" columns={wlCols} rows={data.items} rowKey={(w) => w.id} empty={<EmptyState icon={Gift} title={search ? "No wishlists match" : "No wishlists yet"} />} />
+            <DataTable caption="Wishlists" columns={wlCols} rows={data.items} rowKey={(w) => w.id} onRowClick={(w) => router.push(`/wishlists/${w.id}`)} rowLabel={(w) => `Open ${w.title}`} empty={<EmptyState icon={Gift} title={search ? "No wishlists match" : "No wishlists yet"} />} />
           ) : (
-            <DataTable caption="Surprise requests" columns={cCols} rows={data.items} rowKey={(r) => r.id} empty={<EmptyState icon={Gift} title={search ? "No requests match" : "No surprise requests"} />} />
+            <DataTable caption="Surprise requests" columns={cCols} rows={data.items} rowKey={(r) => r.id} onRowClick={(r) => router.push(`/requests/${r.id}`)} rowLabel={(r) => `Open ${r.reference}`} empty={<EmptyState icon={Gift} title={search ? "No requests match" : "No surprise requests"} />} />
           ))}
         <PagedFooter data={data} onPage={setPage} />
       </Card>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bell, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
-import { AUTH_URL, isSampleEmail, useSession } from "../lib/session";
+import { APP_NAMES, APP_URLS, AUTH_URL, isSampleEmail, useSession, type AppName } from "../lib/session";
 import { currencySymbol, timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
@@ -13,7 +13,8 @@ import { Drawer } from "../ui/overlay";
 export type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number | string };
 export type NavSection = { title?: string; items: NavItem[] };
 
-type Notification = { id: string; title: string; body: string; link: string; read: boolean; at: string; type: string };
+/** app: where link opens; null for older notifications, which open in the current app. */
+type Notification = { id: string; title: string; body: string; link: string; app: AppName | null; read: boolean; at: string; type: string };
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
@@ -25,6 +26,7 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { app: here } = useSession();
   const markAll = useMutation(() => api("/me/notifications/read-all", { method: "POST" }));
   const markOne = useMutation((id: string) => api(`/me/notifications/${id}/read`, { method: "POST" }));
   const unread = data?.filter((n) => !n.read).length ?? 0;
@@ -70,7 +72,9 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
                   onClick={() => {
                     if (!n.read) markOne.run(n.id);
                     setOpen(false);
-                    router.push(n.link);
+                    // A notification about another role (e.g. a payout for staff) opens in that role's app.
+                    if (n.app && n.app !== here) window.location.assign(`${APP_URLS[n.app]}${n.link}`);
+                    else router.push(n.link);
                   }}
                   className={cx("flex w-full gap-3 px-4 py-3 text-left hover:bg-plum-50/60", !n.read && "bg-gold-100/30")}
                 >
@@ -80,6 +84,7 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
                     <span className="block text-xs text-ink-500">{n.body}</span>
                     <span className="mt-0.5 block text-[11px] text-ink-400">
                       {timeAgo(n.at)}
+                      {n.app && n.app !== here && ` · Opens in ${APP_NAMES[n.app]}`}
                       {!n.read && <span className="sr-only"> · unread</span>}
                     </span>
                   </span>

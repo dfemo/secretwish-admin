@@ -88,10 +88,19 @@ const CALLBACK_PATH = "/auth/callback";
 /** The public website and the other SecretWish apps, so the sign-in screen can send people elsewhere. */
 // Production builds fall back to the live public website; local development uses the Website app on port 3000.
 export const WEBSITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? (process.env.NODE_ENV === "production" ? "https://secretwish-web.vercel.app" : "http://localhost:3000");
+const prod = process.env.NODE_ENV === "production";
+/** Where each app lives. Production builds fall back to the live Vercel deployments when the variable isn't set. */
+export const APP_URLS: Record<AppName, string> = {
+  admin: process.env.NEXT_PUBLIC_ADMIN_URL ?? (prod ? "https://secretwish-admin.vercel.app" : "http://localhost:3001"),
+  sender: process.env.NEXT_PUBLIC_SENDER_URL ?? (prod ? "https://secretwish-sender.vercel.app" : "http://localhost:3002"),
+  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL ?? (prod ? "https://secretwish-recipient.vercel.app" : "http://localhost:3003"),
+  vendor: process.env.NEXT_PUBLIC_VENDOR_URL ?? (prod ? "https://secretwish-vendor.vercel.app" : "http://localhost:3004"),
+};
+export const APP_NAMES: Record<AppName, string> = { admin: "Admin", sender: "Sender", recipient: "Wishlists", vendor: "Vendor portal" };
 const appLinks: { app: AppName; label: string; href: string }[] = [
-  { app: "sender", label: "Send a gift", href: process.env.NEXT_PUBLIC_SENDER_URL ?? "http://localhost:3002" },
-  { app: "recipient", label: "My wishlists", href: process.env.NEXT_PUBLIC_RECIPIENT_URL ?? "http://localhost:3003" },
-  { app: "vendor", label: "Vendor portal", href: process.env.NEXT_PUBLIC_VENDOR_URL ?? "http://localhost:3004" },
+  { app: "sender", label: "Send a gift", href: APP_URLS.sender },
+  { app: "recipient", label: "My wishlists", href: APP_URLS.recipient },
+  { app: "vendor", label: "Vendor portal", href: APP_URLS.vendor },
 ];
 
 let manager: UserManager | null = null;

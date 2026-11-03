@@ -7,7 +7,7 @@ import { ErrorState, PageSkeleton } from "@/shared/ui/primitives";
 /** Permission keys from the API (StaffPermissions). The API enforces them; the app uses them to hide what you can't use. */
 export type Permission =
   | "overview.view" | "orders.view" | "orders.manage" | "orders.reveal" | "customers.view" | "people.full" | "vendors.view" | "vendors.manage"
-  | "products.view" | "products.review" | "wishlists.view" | "payments.view" | "refunds.view" | "refunds.manage" | "refunds.decide"
+  | "products.view" | "products.review" | "wishlists.view" | "wishlists.manage" | "payments.view" | "refunds.view" | "refunds.manage" | "refunds.decide"
   | "payouts.view" | "payouts.manage" | "support.view" | "support.manage" | "reports.view" | "audit.view" | "privacy.view"
   | "settings.view" | "settings.manage" | "team.view" | "team.manage";
 
