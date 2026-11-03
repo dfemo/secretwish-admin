@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ShieldAlert,
   Truck,
+  Warehouse,
   XCircle,
 } from "lucide-react";
 
@@ -32,6 +33,9 @@ const map: Record<string, Meta> = {
   RefundRequested: { label: "Refund requested", tone: "warning", icon: RotateCcw },
   RefundCompleted: { label: "Refunded", tone: "neutral", icon: RotateCcw },
   DeliveryException: { label: "Delivery exception", tone: "danger", icon: AlertTriangle },
+  // Hub orders: SecretWish received the gift from the vendor, then sends it out.
+  AtHub: { label: "At SecretWish hub", tone: "plum", icon: Warehouse },
+  ReadyForDelivery: { label: "Out for delivery", tone: "info", icon: Truck },
   // Payments
   Pending: { label: "Pending", tone: "warning", icon: Clock },
   Succeeded: { label: "Succeeded", tone: "success", icon: CheckCircle2 },
@@ -98,6 +102,8 @@ export const ORDER_STATUSES = [
   "AwaitingVendorAcceptance",
   "Processing",
   "Dispatched",
+  "AtHub",
+  "ReadyForDelivery",
   "Delivered",
   "DeliveryException",
   "RefundRequested",

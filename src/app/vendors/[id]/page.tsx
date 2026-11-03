@@ -12,7 +12,7 @@ import { Avatar, Button, Card, CardHeader, cx, ErrorState, KpiCard, Notice, Page
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { KycReview, type Kyc } from "./kyc-review";
 
-type Listing = { id: string; name: string; description?: string; category?: string; emoji: string; tint: string; priceUsd: number; status: string; stock: number; reviewNote?: string };
+type Listing = { id: string; name: string; description?: string; category?: string; emoji: string; tint: string; images?: string[]; priceUsd: number; status: string; stock: number; reviewNote?: string };
 
 type Detail = {
   vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string };
@@ -162,7 +162,7 @@ export default function VendorDetailPage() {
             {listings.map((p) => (
               <li key={p.id} className={cx("rounded-xl border p-2.5", p.status === "PendingReview" ? "border-gold-300 bg-gold-100/30" : "border-ink-100")}>
                 <div className="flex items-center gap-3">
-                  <ProductArt emoji={p.emoji} tint={p.tint} size="sm" />
+                  <ProductArt emoji={p.emoji} tint={p.tint} src={p.images?.[0]} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold">{p.name}</p>
                     <p className="text-xs text-ink-500">

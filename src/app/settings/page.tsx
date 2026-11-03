@@ -8,7 +8,10 @@ import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { EmailDeliverySettings } from "./email-settings";
 import { CurrencySettings, SampleDataSettings } from "./data-settings";
 
-type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number };
+type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number;
+  /** Where vendors deliver gifts going through SecretWish. */
+  hubName: string; hubAddress: string; hubCity: string; hubPhone: string;
+};
 type Data = { settings: Settings; canEdit: boolean };
 
 export default function SettingsPage() {
@@ -56,6 +59,15 @@ export default function SettingsPage() {
             <div className="sm:col-span-2">
               <Switch checked={form.requireDeliveryEvidenceForPayout} onChange={(v) => setForm({ ...form, requireDeliveryEvidenceForPayout: v })} label="Require delivery evidence for payout" description="Orders without a verified code or courier proof are never paid out." disabled={!editable} />
             </div>
+          </fieldset>
+        </Card>
+        <Card>
+          <CardHeader title="SecretWish hub" description="Where vendors deliver gifts that SecretWish delivers itself. Vendors see this on those orders instead of the recipient's address." />
+          <fieldset disabled={!editable} className="grid gap-4 p-5 sm:grid-cols-2">
+            <Field label="Hub name">{(id) => <Input id={id} value={form.hubName ?? ""} onChange={(e) => setForm({ ...form, hubName: e.target.value })} />}</Field>
+            <Field label="Phone for vendors">{(id) => <Input id={id} type="tel" value={form.hubPhone ?? ""} onChange={(e) => setForm({ ...form, hubPhone: e.target.value })} />}</Field>
+            <Field label="Address" className="sm:col-span-2">{(id) => <Input id={id} value={form.hubAddress ?? ""} onChange={(e) => setForm({ ...form, hubAddress: e.target.value })} placeholder="12 Admiralty Way, Lekki Phase 1" />}</Field>
+            <Field label="City">{(id) => <Input id={id} value={form.hubCity ?? ""} onChange={(e) => setForm({ ...form, hubCity: e.target.value })} />}</Field>
           </fieldset>
         </Card>
         <Card>

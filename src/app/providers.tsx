@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
+import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, Radar, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog, Warehouse } from "lucide-react";
 import { useApi, type Paged } from "@/shared/lib/api";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
@@ -21,6 +21,13 @@ const sections: NavSection[] = [
       { href: "/vendors", label: "Vendors & Approvals", icon: Store },
       { href: "/products", label: "Products & Categories", icon: Boxes },
       { href: "/wishlists", label: "Wishlists & Campaigns", icon: Gift },
+    ],
+  },
+  {
+    title: "Delivery",
+    items: [
+      { href: "/hub", label: "SecretWish Hub", icon: Warehouse },
+      { href: "/deliveries", label: "Courier Monitoring", icon: Radar },
     ],
   },
   {
@@ -53,7 +60,14 @@ function Shell({ children }: { children: ReactNode }) {
   // Only show the areas this person's team role opens; the API refuses the rest anyway.
   // Cash gifts waiting for a transfer show as a count on the menu, so they're easy to spot.
   const cash = useApi<Paged<unknown>>(can("payments.view") ? "/admin/cash-gifts?pageSize=1" : null);
-  const badges: Record<string, number | undefined> = { "/cash-gifts": cash.data?.counts?.readyToTransfer };
+  // Courier deliveries needing attention (overdue or not checked in 24 hours) and gifts waiting at the hub do too.
+  const deliveries = useApi<Paged<unknown>>(can("orders.view") ? "/admin/deliveries?pageSize=1" : null);
+  const hub = useApi<{ counts: Record<string, number> }>(can("orders.view") ? "/admin/hub?stage=at-hub" : null);
+  const badges: Record<string, number | undefined> = {
+    "/cash-gifts": cash.data?.counts?.readyToTransfer,
+    "/deliveries": (deliveries.data?.counts?.overdue ?? 0) + (deliveries.data?.counts?.unchecked ?? 0) || undefined,
+    "/hub": hub.data?.counts?.["at-hub"] || undefined,
+  };
   const visible = sections
     .map((s) => ({ ...s, items: s.items.filter((it) => !areaPermission[it.href] || can(areaPermission[it.href])).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
     .filter((s) => s.items.length > 0);

@@ -7,7 +7,7 @@ import { Modal, useToast } from "./overlay";
 
 export type OrderAction = { key: string; label: string };
 
-type Spec = { fields: ("note" | "tracking" | "evidence")[]; noteLabel?: string; tone?: "primary" | "danger" | "gold"; help?: string; consequential?: boolean };
+type Spec = { fields: ("note" | "tracking" | "evidence")[]; noteLabel?: string; noteOptional?: boolean; tone?: "primary" | "danger" | "gold"; help?: string; consequential?: boolean };
 
 // What each workflow action needs from the person performing it. The API enforces the same rules.
 const specs: Record<string, Spec> = {
@@ -18,6 +18,8 @@ const specs: Record<string, Spec> = {
   dispatch: { fields: ["tracking"], help: "The recipient gets a discreet 'on its way' notice and a single-use secret code." },
   redispatch: { fields: ["tracking"] },
   "report-issue": { fields: ["note"], noteLabel: "What went wrong?", tone: "danger" },
+  "hub-receive": { fields: ["note"], noteOptional: true, noteLabel: "Condition on arrival (optional)", help: "The gift has arrived at the SecretWish hub. The vendor is told their part is done." },
+  "hub-ready": { fields: ["note"], noteOptional: true, noteLabel: "Note (optional)", help: "Packed with any other gifts for this person and going out with SecretWish. The recipient gets their secret code now." },
   "confirm-delivery": { fields: ["evidence"], help: "Delivery must be backed by evidence (e.g. courier proof-of-delivery). It does not by itself make the order payable." },
   "confirm-received": { fields: [], help: "Confirm the recipient has the gift. They aren't on SecretWish, so they can't confirm it themselves. This marks the order delivered and tells the vendor." },
   "confirm-satisfied": { fields: [], help: "Tell us the gift arrived as expected. The vendor can then be paid straight away instead of after the usual hold period. After this you'd need to contact support to report a problem." },
@@ -50,7 +52,7 @@ export function OrderActionDialog({ action, basePath, orderId, onClose }: { acti
   if (!action) return null;
   const spec = specs[action.key] ?? { fields: [] };
   const errors = {
-    note: spec.fields.includes("note") && note.trim().length < 3 ? "Please add a short explanation." : null,
+    note: spec.fields.includes("note") && !spec.noteOptional && note.trim().length < 3 ? "Please add a short explanation." : null,
     tracking: spec.fields.includes("tracking") && tracking.trim().length < 4 ? "Enter the courier tracking reference." : null,
     evidence: spec.fields.includes("evidence") && evidence.trim().length < 6 ? "Describe the delivery evidence (e.g. POD reference)." : null,
   };

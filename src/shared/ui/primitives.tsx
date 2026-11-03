@@ -363,9 +363,12 @@ export function Avatar({ name, size = 36, className }: { name: string; size?: nu
   );
 }
 
-/** Synthetic product imagery: an emoji on a soft tinted tile (no third-party photos in the prototype). */
-export function ProductArt({ emoji, tint = "lavender", size = "md", className, label }: { emoji: string; tint?: string; size?: "sm" | "md" | "lg" | "xl"; className?: string; label?: string }) {
+/** A product's picture: its cover photo when the vendor uploaded one (`src`), otherwise its emoji on a soft tinted tile. */
+export function ProductArt({ emoji, tint = "lavender", size = "md", className, label, src }: { emoji: string; tint?: string; size?: "sm" | "md" | "lg" | "xl"; className?: string; label?: string; src?: string | null }) {
   const s = { sm: "size-10 text-xl rounded-xl", md: "size-14 text-3xl rounded-xl", lg: "aspect-square w-full text-6xl rounded-2xl", xl: "aspect-[4/3] w-full text-7xl rounded-2xl" }[size];
+  if (src)
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={label ?? ""} loading="lazy" className={cx("shrink-0 bg-ink-50 object-cover", s, className)} />;
   return (
     <span role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} className={cx("grid shrink-0 place-items-center", tintClasses[tint] ?? "bg-lavender-tint", s, className)}>
       <span className="drop-shadow-sm">{emoji}</span>

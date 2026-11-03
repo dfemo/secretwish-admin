@@ -10,7 +10,7 @@ import { useAccess } from "@/lib/access";
 import { Button, Card, CardHeader, EmptyState, ErrorState, PageHeader, ProductArt, SearchInput, Select, Spinner, StatusBadge, Tabs } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 
-type Product = { id: string; name: string; description: string; priceUsd: number; stock: number; emoji: string; tint: string; status: string; reviewNote?: string; category: string; categoryId: string; deliveryOptions: string[]; vendor: { id: string; name: string } };
+type Product = { id: string; name: string; description: string; priceUsd: number; stock: number; emoji: string; tint: string; images?: string[]; status: string; reviewNote?: string; category: string; categoryId: string; deliveryOptions: string[]; vendor: { id: string; name: string } };
 
 function ProductsInner() {
   const params = useSearchParams();
@@ -79,7 +79,17 @@ function ProductsInner() {
           {data?.map((p) => (
             <li key={p.id}>
               <Card className="flex h-full flex-col overflow-hidden">
-                <ProductArt emoji={p.emoji} tint={p.tint} size="xl" className="rounded-none" />
+                <ProductArt emoji={p.emoji} tint={p.tint} src={p.images?.[0]} size="xl" className="rounded-none" />
+                {(p.images?.length ?? 0) > 1 && (
+                  <div className="flex gap-1.5 px-4 pt-3">
+                    {p.images!.slice(1).map((src) => (
+                      <a key={src} href={src} target="_blank" rel="noopener noreferrer" aria-label="Open photo">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="size-12 rounded-lg object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <div className="flex flex-1 flex-col p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>

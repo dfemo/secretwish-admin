@@ -22,7 +22,10 @@ type Detail = {
   money: { subtotal: number; deliveryFee: number; tax: number; discount: number; total: number; platformFee: number; vendorNet: number; fxRateNgn: number };
   gift: { giftMessage: string; personalisation: string; revealSender: boolean; discreetPackaging: boolean; hidePriceFromRecipient: boolean; budgetMin: number; budgetMax: number; viaWishlist: boolean };
   recipient: { onSecretWish: boolean; invitedAt: string | null; senderCanConfirm: boolean };
-  delivery: { deliveryOption: string; deliveryDate: string | null; trackingReference: string | null; courier: string | null; deliveryEvidence: string | null; deliveredAt: string | null; senderApprovedAt: string | null };
+  delivery: {
+    deliveryOption: string; deliveryDate: string | null; trackingReference: string | null; courier: string | null; deliveryEvidence: string | null; deliveredAt: string | null; senderApprovedAt: string | null;
+    viaHub?: boolean; hubReceivedAt?: string | null; hubReceivedBy?: string | null; hubReadyAt?: string | null; monitoredBy?: string | null; lastCheckAt?: string | null; lastCheckNote?: string | null;
+  };
   verification: { state: string; attempts: number; maxAttempts: number; expiresAt: string } | null;
   events: { id: string; at: string; title: string; detail: string; actor: string; internal: boolean }[];
   payments: { id: string; at: string; kind: string; amount: number; status: string; provider: string; providerReference: string; method: string; failureReason?: string }[];
@@ -249,6 +252,12 @@ export default function OrderDetailPage() {
             <CardHeader title="Delivery" />
             <dl className="grid grid-cols-2 gap-4 p-5">
               <Stat label="Option" value={d.delivery.deliveryOption} />
+              <Stat label="Delivered by" value={d.delivery.viaHub ? <Link href="/hub" className="font-semibold text-plum-700 hover:underline">SecretWish (via the hub)</Link> : "The vendor's courier"} />
+              {d.delivery.hubReceivedAt && <Stat label="Received at hub" value={`${dateTime(d.delivery.hubReceivedAt)}${d.delivery.hubReceivedBy ? ` by ${d.delivery.hubReceivedBy}` : ""}`} />}
+              {d.delivery.hubReadyAt && <Stat label="Out for delivery" value={dateTime(d.delivery.hubReadyAt)} />}
+              {(d.delivery.monitoredBy || d.delivery.lastCheckAt) && (
+                <Stat className="col-span-2" label="Watched by" value={<Link href="/deliveries" className="hover:underline">{d.delivery.monitoredBy ?? "Nobody"}{d.delivery.lastCheckAt ? ` · last check ${dateTime(d.delivery.lastCheckAt)}: ${d.delivery.lastCheckNote}` : ""}</Link>} />
+              )}
               <Stat label="Promised by" value={date(d.delivery.deliveryDate)} />
               <Stat label="Courier" value={d.delivery.courier ?? "—"} />
               <Stat label="Tracking" value={<span className="font-mono text-xs">{d.delivery.trackingReference ?? "—"}</span>} />
