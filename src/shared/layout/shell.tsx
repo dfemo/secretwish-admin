@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Bell, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
+import { Bell, ChevronDown, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
 import { APP_NAMES, APP_URLS, AUTH_URL, isSampleEmail, useSession, type AppName } from "../lib/session";
 import { currencySymbol, timeAgo } from "../lib/format";
@@ -189,13 +189,52 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
       return !c;
     });
   };
+  // Menu sections fold away to keep the sidebar short. Choices are remembered per browser; until someone chooses, only the
+  // section holding the current page is open. That section always stays open so you can see where you are.
+  const [folds, setFolds] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try {
+      setFolds(JSON.parse(localStorage.getItem("secretwish.nav.open") ?? "{}"));
+    } catch {}
+  }, []);
+  const holdsCurrent = (sec: NavSection) => sec.items.some((it) => isActive(pathname, it.href));
+  const isOpen = (sec: NavSection) => !sec.title || holdsCurrent(sec) || (folds[sec.title] ?? false);
+  const fold = (title: string, open: boolean) =>
+    setFolds((f) => {
+      const next = { ...f, [title]: open };
+      try {
+        localStorage.setItem("secretwish.nav.open", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
 
   const nav = (compact: boolean) => (
-    <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 py-4 scrollbar-thin">
-      {sections.map((s, i) => (
-        <div key={i}>
-          {s.title && !compact && <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-[0.12em] text-plum-300/80 uppercase">{s.title}</p>}
-          <ul className="space-y-0.5">
+    <nav aria-label="Main" className={cx("flex-1 overflow-y-auto px-3 py-3 scrollbar-thin", compact ? "space-y-2" : "space-y-1")}>
+      {sections.map((s, i) => {
+        // The icon-only rail shows every item; the full menu folds by section.
+        const open = compact || isOpen(s);
+        const pinned = !!s.title && holdsCurrent(s);
+        const waiting = s.items.reduce((n, it) => n + (typeof it.badge === "number" ? it.badge : 0), 0);
+        const listId = `nav-${i}`;
+        return (
+        <div key={i} className={cx(compact && i > 0 && "border-t border-white/5 pt-2")}>
+          {s.title && !compact && (
+            <button
+              type="button"
+              onClick={() => !pinned && fold(s.title!, !open)}
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-disabled={pinned || undefined}
+              title={pinned ? "This section holds the page you're on" : undefined}
+              className={cx("flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-plum-300/80 uppercase", pinned ? "cursor-default" : "hover:bg-white/5 hover:text-white")}
+            >
+              <span className="flex-1 text-left">{s.title}</span>
+              {!open && waiting > 0 && <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-bold tracking-normal text-plum-950">{waiting}</span>}
+              {!pinned && <ChevronDown className={cx("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden />}
+            </button>
+          )}
+          {open && (
+          <ul id={listId} className="space-y-px pb-1">
             {s.items.map((it) => {
               const active = isActive(pathname, it.href);
               return (
@@ -205,12 +244,12 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
                     aria-current={active ? "page" : undefined}
                     title={compact ? it.label : undefined}
                     className={cx(
-                      "group flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+                      "group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                       active ? "bg-gold-500/15 text-gold-300" : "text-plum-100/80 hover:bg-white/5 hover:text-white",
                       compact && "justify-center px-0",
                     )}
                   >
-                    <it.icon className={cx("size-[18px] shrink-0", active ? "text-gold-400" : "text-plum-300 group-hover:text-white")} aria-hidden />
+                    <it.icon className={cx("size-4 shrink-0", active ? "text-gold-400" : "text-plum-300 group-hover:text-white")} aria-hidden />
                     {!compact && <span className="flex-1 truncate">{it.label}</span>}
                     {!compact && it.badge !== undefined && it.badge !== 0 && <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-bold text-plum-950">{it.badge}</span>}
                   </Link>
@@ -218,8 +257,10 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
               );
             })}
           </ul>
+          )}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 
@@ -228,7 +269,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
       <a href="#main" className="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
-      <aside className={cx("sticky top-0 hidden h-screen shrink-0 flex-col bg-plum-950 text-ivory-50 transition-[width] md:flex", collapsed ? "w-[76px]" : "w-64")}>
+      <aside className={cx("sticky top-0 hidden h-screen shrink-0 flex-col bg-plum-950 text-ivory-50 transition-[width] md:flex", collapsed ? "w-[68px]" : "w-60")}>
         <div className={cx("flex h-16 items-center border-b border-white/5 px-4", collapsed ? "justify-center" : "justify-between")}>
           <Logo suffix={suffix} compact={collapsed} />
           {!collapsed && (

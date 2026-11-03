@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Send } from "lucide-react";
+import { BellRing, Banknote, Send } from "lucide-react";
 import { api, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
-import { dateTime } from "@/shared/lib/format";
+import { dateTime, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Select, Spinner } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
@@ -16,6 +16,9 @@ type CashGift = {
   receivedAt: string | null; thankYouNote: string | null;
   /** Why staff can't transfer it yet; null when the viewer can. */
   transferBlocked: string | null;
+  /** When the recipient was last asked to add bank details, and why a reminder can't be sent now (null when it can). */
+  remindedAt: string | null;
+  remindBlocked: string | null;
 };
 
 const statusTone: Record<string, "success" | "warning" | "neutral" | "danger" | "plum"> = { Received: "success", PaidOut: "plum", PayoutPending: "warning", PaymentPending: "neutral", Failed: "danger", Paid: "plum" };
@@ -29,6 +32,11 @@ export function CashGiftsCard() {
   const toast = useToast();
   const [transferring, setTransferring] = useState<CashGift | null>(null);
   const transfer = useMutation((id: string) => api(`/admin/cash-gifts/${id}/process`, { method: "POST" }));
+  // Errors come back as the result so the toast can show them straight away.
+  const remind = useMutation((id: string) =>
+    api<{ emailed: boolean }>(`/admin/cash-gifts/${id}/remind`, { method: "POST" }).catch((e: Error) => ({ emailed: false, error: e.message })),
+  );
+  const [reminding, setReminding] = useState<string | null>(null);
   const cols: Column<CashGift>[] = [
     {
       key: "ref",
@@ -50,7 +58,9 @@ export function CashGiftsCard() {
       render: (g) => (
         <div className="space-y-1">
           <Badge tone={statusTone[g.status] ?? "neutral"}>{statusLabel[g.status] ?? g.status}</Badge>
-          {g.status === "PayoutPending" && !g.hasBankDetails && <p className="text-[11px] text-warning-700">Waiting for bank details</p>}
+          {g.status === "PayoutPending" && !g.hasBankDetails && (
+            <p className="text-[11px] text-warning-700">Waiting for bank details{g.remindedAt && ` · reminded ${timeAgo(g.remindedAt)}`}</p>
+          )}
           {g.processedBy && <p className="text-[11px] text-ink-500">Sent by {g.processedBy}{g.paidOutAt && ` · ${dateTime(g.paidOutAt)}`}</p>}
           {g.receivedAt && <p className="text-[11px] text-success-700">Confirmed {dateTime(g.receivedAt)}</p>}
           {g.thankYouNote && <p className="max-w-[220px] text-[11px] text-ink-700 italic">“{g.thankYouNote}”</p>}
@@ -62,11 +72,30 @@ export function CashGiftsCard() {
       key: "act",
       header: "",
       render: (g) =>
-        g.status === "PayoutPending" ? (
+        g.status !== "PayoutPending" ? null : g.hasBankDetails ? (
           <Button size="sm" icon={Send} disabled={!!g.transferBlocked} title={g.transferBlocked ?? undefined} onClick={() => setTransferring(g)}>
             Transfer
           </Button>
-        ) : null,
+        ) : (
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={BellRing}
+            disabled={!!g.remindBlocked}
+            title={g.remindBlocked ?? "Ask the recipient to add bank details, in the app and by email"}
+            loading={remind.pending && reminding === g.id}
+            onClick={async () => {
+              setReminding(g.id);
+              const r = await remind.run(g.id);
+              setReminding(null);
+              if (r && "error" in r) toast({ tone: "error", title: "Couldn't send the reminder", body: r.error });
+              else if (r) toast({ tone: "success", title: `Reminder sent for ${g.reference}`, body: r.emailed ? "They got an in-app notice and an email." : "They got an in-app notice. Email isn't set up, so no email went out." });
+              reload();
+            }}
+          >
+            Remind
+          </Button>
+        ),
     },
   ];
   return (
