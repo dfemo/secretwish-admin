@@ -2,7 +2,8 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
+import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, RotateCcw, Settings, ShieldCheck, Store, Users, UserCog } from "lucide-react";
+import { useApi, type Paged } from "@/shared/lib/api";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
 import { ToastProvider } from "@/shared/ui/overlay";
@@ -26,6 +27,7 @@ const sections: NavSection[] = [
     title: "Money",
     items: [
       { href: "/payments", label: "Payments & Transactions", icon: CreditCard },
+      { href: "/cash-gifts", label: "Cash Gifts", icon: Banknote },
       { href: "/refunds", label: "Refunds & Disputes", icon: RotateCcw },
       { href: "/payouts", label: "Vendor Payouts", icon: HandCoins },
     ],
@@ -49,8 +51,11 @@ function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { can, role } = useAccess();
   // Only show the areas this person's team role opens; the API refuses the rest anyway.
+  // Cash gifts waiting for a transfer show as a count on the menu, so they're easy to spot.
+  const cash = useApi<Paged<unknown>>(can("payments.view") ? "/admin/cash-gifts?pageSize=1" : null);
+  const badges: Record<string, number | undefined> = { "/cash-gifts": cash.data?.counts?.readyToTransfer };
   const visible = sections
-    .map((s) => ({ ...s, items: s.items.filter((it) => !areaPermission[it.href] || can(areaPermission[it.href])) }))
+    .map((s) => ({ ...s, items: s.items.filter((it) => !areaPermission[it.href] || can(areaPermission[it.href])).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
     .filter((s) => s.items.length > 0);
   const needed = permissionFor(pathname);
   const home = visible[0]?.items[0]?.href;

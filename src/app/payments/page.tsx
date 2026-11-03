@@ -8,7 +8,6 @@ import { useSession } from "@/shared/lib/session";
 import { dateTime, pct } from "@/shared/lib/format";
 import { Card, EmptyState, ErrorState, KpiCard, Notice, PageHeader, SearchInput, Select, Spinner, StatusBadge } from "@/shared/ui/primitives";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
-import { CashGiftsCard } from "./cash-gifts";
 
 type Payment = { id: string; at: string; kind: string; amount: number; status: string; provider: string; providerReference: string; method: string; failureReason?: string; orderId: string; orderReference: string };
 type Data = { summary: { counts: { charges: number; succeeded: number; failed: number; pending: number }; refundedAmount: number }; page: Paged<Payment> };
@@ -77,7 +76,6 @@ export default function PaymentsPage() {
           </>
         )}
       </Card>
-      <CashGiftsCard />
     </>
   );
 }

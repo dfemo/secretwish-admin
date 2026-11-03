@@ -26,6 +26,7 @@ export const areaPermission: Record<string, Permission> = {
   "/products": "products.view",
   "/wishlists": "wishlists.view",
   "/payments": "payments.view",
+  "/cash-gifts": "payments.view",
   "/refunds": "refunds.view",
   "/payouts": "payouts.view",
   "/support": "support.view",

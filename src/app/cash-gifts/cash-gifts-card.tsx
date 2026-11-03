@@ -21,7 +21,7 @@ type CashGift = {
 const statusTone: Record<string, "success" | "warning" | "neutral" | "danger" | "plum"> = { Received: "success", PaidOut: "plum", PayoutPending: "warning", PaymentPending: "neutral", Failed: "danger", Paid: "plum" };
 const statusLabel: Record<string, string> = { PayoutPending: "Paid · to transfer", PaidOut: "Transferred · awaiting receipt", Received: "Received by recipient", PaymentPending: "Not paid", Failed: "Failed", Paid: "Paid" };
 
-/** Admin → Payments: money senders gave instead of gifts, the SecretWish fee, and whether the recipient has been paid. */
+/** Admin → Money → Cash gifts: money senders gave instead of gifts, the SecretWish fee, the transfer and the recipient's receipt. */
 export function CashGiftsCard() {
   const [status, setStatus] = useState("");
   const { data, items, error, loading, reload, setPage, search, setSearch } = usePagedApi<CashGift>("/admin/cash-gifts", { status }, 15);
@@ -70,7 +70,7 @@ export function CashGiftsCard() {
     },
   ];
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader
         title="Cash gifts"
         description="Senders pay SecretWish; staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. Transfers are simulated."
