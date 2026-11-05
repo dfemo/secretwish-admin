@@ -5,7 +5,8 @@ import { Crown, Medal, Trophy } from "lucide-react";
 import { useApi } from "../lib/api";
 import { Card, CardHeader, cx, EmptyState, ErrorState, PageHeader, Skeleton, Tabs } from "./primitives";
 
-type Row = { rank: number; score: number; secondary: number; you: boolean };
+/** Everyone but you is shown by masked name and email ("Ada O.", "a***@gmail.com"). */
+type Row = { rank: number; score: number; secondary: number; you: boolean; name: string; email?: string | null };
 export type MyBoard = { rank: number | null; total: number; score: number; secondary: number; toNext: number | null; topPercent: number | null; top: Row[]; you: Row | null };
 
 /** "1st", "2nd", "23rd". */
@@ -15,7 +16,7 @@ export function ordinal(n: number) {
 }
 
 /**
- * Where you stand, with nobody else identified: your place, how far to the next one, and the top ten as anonymous scores.
+ * Where you stand, with nobody else fully identified: your place, how far to the next one, and the top ten by masked name and email.
  * `score` describes the main figure ("12 gifts sent"); `secondary` an optional second one shown beside it.
  */
 export function MyLeaderboard({
@@ -73,7 +74,7 @@ export function MyLeaderboard({
             </dl>
           </Card>
           <Card>
-            <CardHeader title="Top 10" description="Everyone else stays anonymous: just their place and score." />
+            <CardHeader title="Top 10" description="Names and emails are partly hidden to keep everyone private." />
             {data.top.length === 0 ? (
               <EmptyState icon={Trophy} title="Nobody on the board yet" />
             ) : (
@@ -81,7 +82,10 @@ export function MyLeaderboard({
                 {[...data.top, ...(data.you ? [data.you] : [])].map((r, i) => (
                   <li key={i} className={cx("flex items-center gap-3 py-2.5 text-sm", r.you && "-mx-5 bg-plum-50 px-5 font-semibold", data.you && i === data.top.length && "border-t-2 border-dashed")}>
                     <span className={cx("grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold tabular", r.rank === 1 ? "bg-gold-400 text-plum-950" : r.rank <= 3 ? "bg-plum-100 text-plum-800" : "bg-ink-50 text-ink-700")}>{r.rank}</span>
-                    <span className="flex-1">{r.you ? "You" : "Anonymous"}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{r.name}{r.you && <span className="ml-1.5 rounded-full bg-plum-700 px-1.5 py-0.5 text-[10px] font-bold uppercase text-ivory-50">You</span>}</span>
+                      {r.email && <span className="block truncate text-xs font-normal text-ink-500">{r.email}</span>}
+                    </span>
                     <span className="tabular">{score(r.score)}</span>
                     {secondary && <span className="hidden w-32 text-right text-xs text-ink-500 tabular sm:block">{secondary(r.secondary)}</span>}
                   </li>
