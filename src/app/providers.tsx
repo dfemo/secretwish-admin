@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, Radar, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, Warehouse } from "lucide-react";
+import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Package, Radar, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, UsersRound, Warehouse } from "lucide-react";
 import { useApi, type Paged } from "@/shared/lib/api";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
@@ -52,6 +52,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/privacy", label: "Privacy & Security", icon: ShieldCheck },
       { href: "/audit", label: "Audit Logs", icon: FileClock },
+      { href: "/users", label: "All users", icon: UsersRound },
       { href: "/team", label: "Team", icon: UserCog },
       { href: "/roles", label: "Roles & Privileges", icon: KeyRound },
       { href: "/settings", label: "Settings", icon: Settings },
@@ -62,7 +63,7 @@ const sections: NavSection[] = [
 function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { can, role } = useAccess();
+  const { can, role, isSuperAdmin } = useAccess();
   // Only show the areas this person's team role opens; the API refuses the rest anyway.
   // Cash gifts waiting for a transfer show as a count on the menu, so they're easy to spot.
   const cash = useApi<Paged<unknown>>(can("payments.view") ? "/admin/cash-gifts?pageSize=1" : null);
@@ -75,7 +76,7 @@ function Shell({ children }: { children: ReactNode }) {
     "/hub": hub.data?.counts?.["at-hub"] || undefined,
   };
   const visible = sections
-    .map((s) => ({ ...s, items: s.items.filter((it) => !areaPermission[it.href] || can(areaPermission[it.href])).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
+    .map((s) => ({ ...s, items: s.items.filter((it) => (it.href === "/users" ? isSuperAdmin : !areaPermission[it.href] || can(areaPermission[it.href]))).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
     .filter((s) => s.items.length > 0);
   const needed = permissionFor(pathname);
   const home = visible[0]?.items[0]?.href;

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { ArrowLeft, Cake, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import { API_URL, api, setAccessTokenProvider, setDemoUser, useApi } from "./api";
 import { guessCurrency, money, type Currency } from "./format";
@@ -33,6 +33,10 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   city: string;
+  /** ISO date (yyyy-mm-dd). Needed before creating wishlists or gifting; set once, then only support can change it. */
+  dateOfBirth?: string | null;
+  /** Blacklisted by SecretWish: nobody can gift to this account and it can't create wishlists. */
+  blacklisted?: boolean;
   staffRole: string | null;
   vendor: VendorSummary | null;
   capabilities: { canSend: boolean; canReceive: boolean; isVendor: boolean; isStaff: boolean };
@@ -302,7 +306,51 @@ function AccessGate({ children, onProfileChange }: { children: ReactNode; onProf
       </Centered>
     );
   if (app === "vendor" && profile.vendor?.status !== "Approved") return <OpenYourStore vendor={profile.vendor} onSubmitted={onProfileChange} />;
+  if ((app === "sender" || app === "recipient") && !profile.dateOfBirth)
+    return (
+      <>
+        <DateOfBirthPrompt app={app} onSaved={onProfileChange} />
+        {children}
+      </>
+    );
   return <>{children}</>;
+}
+
+/** Asks for a date of birth, which is needed before creating wishlists or sending gifts. People can still look around without it. */
+function DateOfBirthPrompt({ app, onSaved }: { app: AppName; onSaved: () => Promise<void> }) {
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!value) return setError("Enter your date of birth.");
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/me/date-of-birth", { method: "PUT", body: { dateOfBirth: value } });
+      await onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save your date of birth.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div role="region" aria-label="Add your date of birth" className="border-b border-gold-300 bg-gold-100 px-4 py-3 text-ink-900">
+      <form onSubmit={save} className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+        <Cake aria-hidden className="h-5 w-5 shrink-0 text-plum-700" />
+        <p className="min-w-0 flex-1 text-sm">
+          <span className="font-semibold">Add your date of birth</span> to {app === "recipient" ? "create wishlists (and your birthday wishlist)" : "send gifts"}. It can only be set once.
+        </p>
+        <label className="sr-only" htmlFor="dob-prompt">Date of birth</label>
+        <input id="dob-prompt" type="date" max={today} value={value} onChange={(e) => setValue(e.target.value)} autoComplete="bday"
+          className="h-10 rounded-xl border border-ink-200 bg-white px-3 text-sm" />
+        <Button size="sm" type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
+        {error && <p role="alert" className="w-full text-sm text-red-700">{error}</p>}
+      </form>
+    </div>
+  );
 }
 
 const storeCities = ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Enugu", "Kano"];

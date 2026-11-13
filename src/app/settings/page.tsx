@@ -11,6 +11,9 @@ import { CurrencySettings, SampleDataSettings } from "./data-settings";
 type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number;
   /** Where vendors deliver gifts going through SecretWish. */
   hubName: string; hubAddress: string; hubCity: string; hubPhone: string;
+  /** Wishlist limits: new lists per calendar month (Free / paid plans), per calendar year for people who haven't sent a gift that year,
+   * and how long a sender can hold a wish without paying for it. */
+  freeWishlistsPerMonth: number; paidWishlistsPerMonth: number; nonSenderWishlistsPerYear: number; wishClaimHoldHours: number;
 };
 type Data = { settings: Settings; canEdit: boolean };
 
@@ -30,6 +33,10 @@ export default function SettingsPage() {
     fx: form.fxRateNgn <= 0 ? "Must be positive." : null,
     attempts: form.verificationMaxAttempts < 1 || form.verificationMaxAttempts > 10 ? "Between 1 and 10." : null,
     cashFee: form.cashGiftFeeRate < 0 || form.cashGiftFeeRate > 0.3 ? "Between 0% and 30%." : null,
+    freeLists: form.freeWishlistsPerMonth < 1 || form.freeWishlistsPerMonth > 20 ? "Between 1 and 20." : null,
+    paidLists: form.paidWishlistsPerMonth < 1 || form.paidWishlistsPerMonth > 50 ? "Between 1 and 50." : null,
+    yearLists: form.nonSenderWishlistsPerYear < 1 || form.nonSenderWishlistsPerYear > 100 ? "Between 1 and 100." : null,
+    claimHold: form.wishClaimHoldHours < 1 || form.wishClaimHoldHours > 720 ? "Between 1 and 720 hours." : null,
   };
   const invalid = Object.values(errs).some(Boolean);
 
@@ -59,6 +66,23 @@ export default function SettingsPage() {
             <div className="sm:col-span-2">
               <Switch checked={form.requireDeliveryEvidenceForPayout} onChange={(v) => setForm({ ...form, requireDeliveryEvidenceForPayout: v })} label="Require delivery evidence for payout" description="Orders without a verified code or courier proof are never paid out." disabled={!editable} />
             </div>
+          </fieldset>
+        </Card>
+        <Card>
+          <CardHeader title="Wishlist limits" description="How many wishlists people can create. Counts lists created, so deleting one doesn't free a slot. Everyone needs a date of birth first." />
+          <fieldset disabled={!editable} className="grid gap-4 p-5 sm:grid-cols-2">
+            <Field label="Free plan · lists per month" error={errs.freeLists}>
+              {(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.freeWishlistsPerMonth} onChange={num("freeWishlistsPerMonth")} />}
+            </Field>
+            <Field label="Subscribers · lists per month" error={errs.paidLists} hint="Customer Monthly and Yearly plans.">
+              {(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.paidWishlistsPerMonth} onChange={num("paidWishlistsPerMonth")} />}
+            </Field>
+            <Field label="Lists per year if they haven't sent a gift" error={errs.yearLists} hint="Resets on 1 January; sending any gift that year lifts it.">
+              {(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.nonSenderWishlistsPerYear} onChange={num("nonSenderWishlistsPerYear")} />}
+            </Field>
+            <Field label="Wish hold without payment (hours)" error={errs.claimHold} hint="One sender per wish: an unpaid claim frees up after this.">
+              {(id, d) => <Input id={id} aria-describedby={d} type="number" value={form.wishClaimHoldHours} onChange={num("wishClaimHoldHours")} />}
+            </Field>
           </fieldset>
         </Card>
         <Card>

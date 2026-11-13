@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Heart, Lock, LockOpen, Users } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Heart, Lock, LockOpen, ShieldCheck, Undo2, Users } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date, dateTime } from "@/shared/lib/format";
@@ -11,7 +11,13 @@ import { Badge, Button, Card, CardHeader, ErrorState, KpiCard, Notice, PageSkele
 import { DataTable, type Column } from "@/shared/ui/data";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 
-type Item = { id: string; kind: string; name: string; quantity: number; fulfilled: boolean; notes: string; priceUsd: number | null; giftCount: number; label: string | null };
+/** Who is fulfilling a wish (one sender at a time) and how far: Claimed → SenderCompleted → RecipientConfirmed → Confirmed (fulfilled). */
+type Claim = {
+  status: "Open" | "Claimed" | "SenderCompleted" | "RecipientConfirmed" | "Confirmed"; stage: string; sender: string | null;
+  claimedAt: string | null; senderCompletedAt: string | null; recipientConfirmedAt: string | null; confirmedAt: string | null; confirmedBy: string | null;
+  canConfirm: boolean; canRelease: boolean;
+};
+type Item = { id: string; kind: string; name: string; quantity: number; fulfilled: boolean; notes: string; priceUsd: number | null; giftCount: number; label: string | null; claim: Claim };
 type Gift = { id: string; kind: "Order" | "Cash"; reference: string; amountUsd: number; at: string; status: string; sender: string; item: string | null };
 type Gifter = { sender: string; gifts: number; amountUsd: number; last: string };
 type Request = { id: string; reference: string; title: string; status: string; createdAt: string; budgetMin: number; budgetMax: number; quotes: number; accepted: boolean; sender: string };
@@ -22,6 +28,9 @@ type Detail = {
   owner: { id: string; name: string; email: string; city: string };
   state: "Open" | "Fulfilled" | "Closed";
   closed: Closed | null;
+  isBirthday: boolean;
+  /** Blacklisted by SecretWish (the list itself, or its owner's account): nobody can gift from it. */
+  blacklist: { list: boolean; owner: boolean; at: string; by: string | null; reason: string | null } | null;
   stats: {
     items: number; fulfilled: number; gifts: number; gifters: number; givenUsd: number;
     orders: number; ordersUsd: number; deliveredOrders: number; cash: number; cashUsd: number; cashReceived: number; requests: number; unsuccessful: number;
@@ -35,6 +44,16 @@ type Detail = {
   canManage: boolean;
 };
 
+type Action = "close" | "reopen" | "blacklist" | "unblacklist" | "confirm" | "release";
+const dialog: Record<Action, { title: (item?: string) => string; description: string; confirm: string; done: string; reason?: string; danger?: boolean }> = {
+  close: { title: () => "Close this wishlist?", description: "No more senders will be able to gift from it, and open sourcing requests for it are closed. The owner is notified and this is recorded in the audit log.", confirm: "Close wishlist", done: "Wishlist closed", reason: "Why are you closing it?", danger: true },
+  reopen: { title: () => "Reopen this wishlist?", description: "Senders will be able to gift from it again. The owner is notified.", confirm: "Reopen wishlist", done: "Wishlist reopened" },
+  blacklist: { title: () => "Blacklist this wishlist?", description: "Nobody will be able to gift from it, including payments already started, and it drops out of discovery. The owner is notified.", confirm: "Blacklist wishlist", done: "Wishlist blacklisted", reason: "Why are you blacklisting it?", danger: true },
+  unblacklist: { title: () => "Lift the blacklist?", description: "Senders will be able to gift from this list again. The owner is notified.", confirm: "Lift blacklist", done: "Blacklist lifted" },
+  confirm: { title: (item) => `Confirm “${item}” was fulfilled?`, description: "The sender marked it completed and the owner confirmed receiving it. Confirming marks the wish fulfilled for good.", confirm: "Confirm fulfilled", done: "Wish confirmed" },
+  release: { title: (item) => `Release “${item}”?`, description: "The sender holding this wish loses it and anyone can gift it again. Use this when a claim is stuck or was abandoned.", confirm: "Release wish", done: "Wish released", reason: "Why are you releasing it?", danger: true },
+};
+
 const closureLabel: Record<Closed["kind"], string> = { Thanks: "Thank-you", NoLongerNeeded: "No longer needed", Staff: "Closed by staff" };
 
 export default function WishlistDetailPage() {
@@ -42,8 +61,9 @@ export default function WishlistDetailPage() {
   const { data: d, error, loading, reload } = useApi<Detail>(`/admin/wishlists/${id}`);
   const { fmt } = useSession();
   const toast = useToast();
-  const [acting, setActing] = useState<"close" | "reopen" | null>(null);
-  const act = useMutation((key: string, reason: string) => api(`/admin/wishlists/${id}/${key}`, { method: "POST", body: { body: reason } }));
+  const [acting, setActing] = useState<{ key: Action; item?: Item } | null>(null);
+  const act = useMutation((key: Action, reason: string, itemId?: string) =>
+    api(itemId ? `/admin/wishlist-items/${itemId}/${key}` : `/admin/wishlists/${id}/${key}`, { method: "POST", body: { body: reason } }));
 
   if (loading) return <PageSkeleton />;
   if (error || !d) return <ErrorState error={error} onRetry={reload} />;
@@ -61,6 +81,24 @@ export default function WishlistDetailPage() {
     { key: "n", header: "Wish", render: (i) => (<div><p className="font-semibold">{i.name}</p><p className="text-xs text-ink-500">{i.kind}{i.quantity > 1 ? ` · ×${i.quantity}` : ""}{i.notes ? ` · ${i.notes}` : ""}</p></div>) },
     { key: "p", header: "Price", align: "right", render: (i) => (i.priceUsd != null ? fmt(i.priceUsd) : "—") },
     { key: "g", header: "Gifted", render: (i) => (i.label ? <Badge tone={i.giftCount > 1 ? "plum" : "success"}>{i.label}</Badge> : i.fulfilled ? <Badge tone="success">Gifted</Badge> : <span className="text-xs text-ink-400">Not yet</span>) },
+    {
+      key: "f",
+      header: "Fulfilment",
+      render: (i) => (
+        <div className="space-y-1">
+          <Badge tone={i.claim.status === "Confirmed" ? "success" : i.claim.status === "RecipientConfirmed" ? "gold" : i.claim.status === "Open" ? "neutral" : "plum"}>
+            {i.claim.status === "SenderCompleted" ? "Awaiting owner" : i.claim.stage}
+          </Badge>
+          {i.claim.sender && <p className="text-xs text-ink-500">by {i.claim.sender}</p>}
+          {d.canManage && (i.claim.canConfirm || i.claim.canRelease) && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {i.claim.canConfirm && <Button size="sm" icon={CheckCircle2} onClick={() => setActing({ key: "confirm", item: i })}>Confirm</Button>}
+              {i.claim.canRelease && <Button size="sm" variant="ghost" icon={Undo2} onClick={() => setActing({ key: "release", item: i })}>Release</Button>}
+            </div>
+          )}
+        </div>
+      ),
+    },
   ];
   const giftCols: Column<Gift>[] = [
     { key: "r", header: "Gift", render: (g) => (g.kind === "Order" ? <Link href={`/orders/${g.id}`} className="font-semibold text-plum-700 hover:underline">{g.reference}</Link> : <span className="font-semibold">{g.reference}</span>) },
@@ -97,6 +135,8 @@ export default function WishlistDetailPage() {
             <Badge tone={d.state === "Closed" ? "neutral" : d.state === "Fulfilled" ? "success" : "plum"}>{d.state}</Badge>
             <StatusBadge status={d.visibility} />
             {d.stats.gifters > 1 && <Badge tone="plum" icon={Users}>Multiple gifters</Badge>}
+            {d.isBirthday && <Badge tone="gold">Birthday list</Badge>}
+            {d.blacklist && <Badge tone="danger" icon={Ban}>Blacklisted</Badge>}
           </div>
           <p className="mt-1 text-sm text-ink-500">
             {d.owner.name} · {d.owner.city} · <span className="break-all">{d.owner.email}</span> · created {date(d.createdAt)}
@@ -105,13 +145,28 @@ export default function WishlistDetailPage() {
           </p>
           {d.description && <p className="mt-2 max-w-2xl text-sm text-ink-700">{d.description}</p>}
         </div>
-        {d.canManage &&
-          (d.closed ? (
-            <Button variant="secondary" icon={LockOpen} onClick={() => setActing("reopen")}>Reopen wishlist</Button>
-          ) : (
-            <Button variant="secondary" icon={Lock} onClick={() => setActing("close")}>Close wishlist</Button>
-          ))}
+        {d.canManage && (
+          <div className="flex flex-wrap gap-2">
+            {d.closed ? (
+              <Button variant="secondary" icon={LockOpen} onClick={() => setActing({ key: "reopen" })}>Reopen wishlist</Button>
+            ) : (
+              <Button variant="secondary" icon={Lock} onClick={() => setActing({ key: "close" })}>Close wishlist</Button>
+            )}
+            {d.blacklist?.list ? (
+              <Button variant="secondary" icon={ShieldCheck} onClick={() => setActing({ key: "unblacklist" })}>Lift blacklist</Button>
+            ) : (
+              <Button variant="danger" icon={Ban} onClick={() => setActing({ key: "blacklist" })}>Blacklist</Button>
+            )}
+          </div>
+        )}
       </header>
+
+      {d.blacklist && (
+        <Notice className="mb-6" tone="danger" icon={Ban} title={d.blacklist.list ? `Wishlist blacklisted ${dateTime(d.blacklist.at)}${d.blacklist.by ? ` by ${d.blacklist.by}` : ""}` : "The owner's account is blacklisted"}>
+          {d.blacklist.reason} Nobody can gift from this list, it&apos;s hidden from discovery, and payments already started are refused.
+          {!d.blacklist.list && " Lift it from Customers."}
+        </Notice>
+      )}
 
       {d.closed &&
         (d.closed.byOwner ? (
@@ -198,16 +253,16 @@ export default function WishlistDetailPage() {
       <ConfirmDialog
         open={!!acting}
         onClose={() => { setActing(null); act.setError(null); }}
-        title={acting === "close" ? "Close this wishlist?" : "Reopen this wishlist?"}
-        description={acting === "close" ? "No more senders will be able to gift from it, and open sourcing requests for it are closed. The owner is notified and this is recorded in the audit log." : d.closed?.byOwner ? "The owner closed this list themselves. Reopening lets senders gift from it again and removes their closing message. The owner is notified." : "Senders will be able to gift from it again. The owner is notified."}
-        confirmLabel={acting === "close" ? "Close wishlist" : "Reopen wishlist"}
-        tone={acting === "close" ? "danger" : "primary"}
-        reasonLabel={acting === "close" ? "Why are you closing it?" : undefined}
+        title={acting ? dialog[acting.key].title(acting.item?.name) : ""}
+        description={acting?.key === "reopen" && d.closed?.byOwner ? "The owner closed this list themselves. Reopening lets senders gift from it again and removes their closing message. The owner is notified." : acting ? dialog[acting.key].description : undefined}
+        confirmLabel={acting ? dialog[acting.key].confirm : ""}
+        tone={acting && dialog[acting.key].danger ? "danger" : "primary"}
+        reasonLabel={acting ? dialog[acting.key].reason : undefined}
         pending={act.pending}
         error={act.error?.message}
         onConfirm={async (reason) => {
-          if (acting && (await act.run(acting, reason)) !== undefined) {
-            toast({ tone: "success", title: acting === "close" ? "Wishlist closed" : "Wishlist reopened" });
+          if (acting && (await act.run(acting.key, reason, acting.item?.id)) !== undefined) {
+            toast({ tone: "success", title: dialog[acting.key].done });
             setActing(null);
             reload();
           }
