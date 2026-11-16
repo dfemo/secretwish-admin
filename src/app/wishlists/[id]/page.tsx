@@ -7,7 +7,7 @@ import { ArrowLeft, Ban, CheckCircle2, Heart, Lock, LockOpen, PieChart, ShieldCh
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date, dateTime } from "@/shared/lib/format";
-import { Badge, Button, Card, CardHeader, ErrorState, KpiCard, Notice, PageSkeleton, Stat, StatusBadge } from "@/shared/ui/primitives";
+import { Badge, Button, Card, CardHeader, cx, ErrorState, KpiCard, Notice, PageSkeleton, Stat, StatusBadge } from "@/shared/ui/primitives";
 import { DataTable, type Column } from "@/shared/ui/data";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 
@@ -89,7 +89,7 @@ export default function WishlistDetailPage() {
       render: (i) =>
         i.cash ? (
           // Cash wishes: asked for, paid so far, and the difference.
-          <div className="space-y-0.5 text-right">
+          <div className="space-y-0.5 @3xl:text-right">
             <p className="font-semibold">{i.cash.requestedUsd != null ? fmt(i.cash.requestedUsd) : "Any amount"}</p>
             <p className="text-xs text-success-700">{fmt(i.cash.raisedUsd)} paid</p>
             {i.cash.remainingUsd != null && i.cash.remainingUsd > 0 && <p className="text-xs font-semibold text-warning-700">{fmt(i.cash.remainingUsd)} to go</p>}
@@ -222,16 +222,35 @@ export default function WishlistDetailPage() {
         <KpiCard tint="lavender" label="Didn't go through" value={d.stats.unsuccessful.toLocaleString()} hint="Unpaid, cancelled or refunded" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
-        <Card>
-          <CardHeader title={`Wishes (${d.items.length})`} description="In the owner's order, with how many times each was gifted." />
-          <DataTable caption="Wishes" columns={itemCols} rows={d.items} rowKey={(i) => i.id} empty={<p className="p-5 text-sm text-ink-500">No wishes yet.</p>} />
-        </Card>
-        <Card>
-          <CardHeader title={`Gifts (${d.gifts.length})`} description="Every paid gift from this list, newest first. Refunded and cancelled ones aren't counted." />
-          <DataTable caption="Gifts" columns={giftCols} rows={d.gifts} rowKey={(g) => g.id} empty={<p className="p-5 text-sm text-ink-500">Nobody has gifted from this list yet.</p>} />
-        </Card>
-      </div>
+      {/* Wishes get the full width, laid out as rows that wrap rather than a table, so everything shows at a glance without scrolling. */}
+      <Card>
+        <CardHeader title={`Wishes (${d.items.length})`} description="In the owner's order, with how many times each was gifted." />
+        {d.items.length === 0 ? (
+          <p className="p-5 text-sm text-ink-500">No wishes yet.</p>
+        ) : (
+          <div className="@container">
+            <div aria-hidden className="hidden border-b border-ink-100 px-5 pb-2 text-xs font-medium text-ink-500 @3xl:grid @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,2fr)] @3xl:gap-6">
+              {itemCols.map((c) => <span key={c.key} className={cx(c.align === "right" && "text-right")}>{c.header}</span>)}
+            </div>
+            <ul className="divide-y divide-ink-100">
+              {d.items.map((i) => (
+                <li key={i.id} className="grid gap-x-6 gap-y-3 px-5 py-4 sm:grid-cols-2 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,2fr)] @3xl:items-start">
+                  {itemCols.map((c) => (
+                    <div key={c.key} className={cx("min-w-0 text-sm", c.key === "n" && "sm:col-span-2 @3xl:col-span-1", c.align === "right" && "@3xl:text-right")}>
+                      {c.key !== "n" && <p className="mb-1 text-[11px] font-medium text-ink-400 @3xl:hidden">{c.header}</p>}
+                      {c.render(i)}
+                    </div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
+      <Card className="mt-6">
+        <CardHeader title={`Gifts (${d.gifts.length})`} description="Every paid gift from this list, newest first. Refunded and cancelled ones aren't counted." />
+        <DataTable caption="Gifts" columns={giftCols} rows={d.gifts} rowKey={(g) => g.id} empty={<p className="p-5 text-sm text-ink-500">Nobody has gifted from this list yet.</p>} />
+      </Card>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1.4fr]">
         <Card>
