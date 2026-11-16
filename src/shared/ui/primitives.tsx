@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, useId, type ComponentProps, type ReactNode } from "react";
+import { forwardRef, useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
 import { AlertCircle, ArrowDownRight, ArrowUpRight, Inbox, Loader2, type LucideIcon, RefreshCw } from "lucide-react";
 import { statusMeta, tintClasses, toneClasses, type Tone } from "../lib/status";
 import { initials } from "../lib/format";
@@ -59,7 +59,7 @@ export function ButtonLink({ href, variant = "primary", size = "md", icon: Icon,
 // ---------------- Surfaces ----------------
 export function Card({ className, children, ...rest }: Omit<ComponentProps<"section">, "ref">) {
   return (
-    <section className={cx("rounded-2xl border border-ink-200/70 bg-white shadow-[var(--shadow-card)]", className)} {...rest}>
+    <section className={cx("rounded-[24px] border border-white/90 bg-white/80 shadow-[0_1px_2px_rgb(43_23_54/0.04),0_12px_32px_rgb(43_23_54/0.06)] backdrop-blur-md", className)} {...rest}>
       {children}
     </section>
   );
@@ -69,7 +69,7 @@ export function CardHeader({ title, description, action, className }: { title: R
   return (
     <div className={cx("flex flex-wrap items-start justify-between gap-3 px-5 pt-5", className)}>
       <div className="min-w-0">
-        <h2 className="text-[15px] font-semibold text-ink-900">{title}</h2>
+        <h2 className="text-base font-semibold text-ink-900">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-ink-500">{description}</p>}
       </div>
       {action}
@@ -82,12 +82,26 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: Re
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <div className="mb-1 text-xs font-medium text-ink-500">{eyebrow}</div>}
-        <h1 className="font-display text-[28px] leading-tight font-semibold text-plum-900 md:text-[32px]">{title}</h1>
+        <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight text-plum-900 md:text-[34px]">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm text-ink-500">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
+}
+
+/** "Good morning, Ada" for the viewer's local time, and today's date. Starts neutral and fills in after the first render, so the
+ * server-rendered page and the browser agree. */
+export function useGreeting(name: string | null | undefined) {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
+  const first = (name ?? "").trim().split(/\s+/)[0];
+  const hour = now?.getHours();
+  const part = hour === undefined ? "Welcome back" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return {
+    greeting: first ? `${part}, ${first}` : part,
+    today: now ? now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "",
+  };
 }
 
 // ---------------- Badges ----------------
@@ -119,13 +133,13 @@ export function SampleDataBadge() {
 
 // ---------------- KPI ----------------
 const kpiTints = {
-  plum: "bg-plum-50 border-plum-100",
-  gold: "bg-gold-100/60 border-gold-100",
-  sage: "bg-sage-tint/70 border-sage-tint",
-  rose: "bg-rose-tint/70 border-rose-tint",
-  ivory: "bg-ivory-200/60 border-ivory-200",
-  lavender: "bg-lavender-tint/60 border-lavender-tint",
-  white: "bg-white border-ink-200/70",
+  plum: "from-plum-50/90",
+  gold: "from-gold-100/80",
+  sage: "from-sage-tint/80",
+  rose: "from-rose-tint/80",
+  ivory: "from-ivory-200/80",
+  lavender: "from-lavender-tint/80",
+  white: "from-white",
 };
 
 export function KpiCard({
@@ -146,23 +160,31 @@ export function KpiCard({
   href?: string;
 }) {
   const body = (
-    <div className={cx("h-full rounded-2xl border p-4 transition-shadow", kpiTints[tint], href && "hover:shadow-[var(--shadow-card)]")}>
-      <div className="flex items-start justify-between gap-2">
-        {Icon && (
-          <span className="grid size-9 place-items-center rounded-xl bg-white/80 text-plum-700 shadow-sm">
-            <Icon className="size-[18px]" aria-hidden />
-          </span>
-        )}
+    <div
+      className={cx(
+        "h-full rounded-[22px] border border-white/90 bg-gradient-to-br to-white/75 p-4 shadow-[0_1px_2px_rgb(43_23_54/0.04),0_10px_28px_rgb(43_23_54/0.05)] backdrop-blur-md transition",
+        kpiTints[tint],
+        href && "hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgb(43_23_54/0.05),0_16px_36px_rgb(43_23_54/0.08)]",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon && (
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-plum-700 shadow-sm">
+              <Icon className="size-4" aria-hidden />
+            </span>
+          )}
+          <span className="truncate text-xs font-medium text-ink-500">{label}</span>
+        </div>
         {delta !== undefined && delta !== null && (
-          <span className={cx("inline-flex items-center gap-0.5 text-[11px] font-semibold", delta >= 0 ? "text-success-700" : "text-danger-700")}>
+          <span className={cx("inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold", delta >= 0 ? "bg-success-50 text-success-700" : "bg-danger-50 text-danger-700")}>
             {delta >= 0 ? <ArrowUpRight className="size-3" aria-hidden /> : <ArrowDownRight className="size-3" aria-hidden />}
             {Math.abs(delta)}%<span className="sr-only">{delta >= 0 ? " increase" : " decrease"} vs previous period</span>
           </span>
         )}
       </div>
-      <div className="mt-3 text-[22px] leading-none font-bold tracking-tight text-ink-900 tabular">{value}</div>
-      <div className="mt-1.5 text-xs font-medium text-ink-500">{label}</div>
-      {hint && <div className="mt-1 text-[11px] text-ink-400">{hint}</div>}
+      <div className="mt-4 text-[26px] leading-none font-semibold tracking-tight text-ink-900 tabular">{value}</div>
+      {hint && <div className="mt-2 text-[11px] text-ink-400">{hint}</div>}
     </div>
   );
   return href ? (

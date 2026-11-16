@@ -7,7 +7,7 @@ import { useApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, humanize, pct, shortDate, timeAgo } from "@/shared/lib/format";
 import { statusMeta } from "@/shared/lib/status";
-import { Card, CardHeader, cx, ErrorState, KpiCard, PageHeader, PageSkeleton, SampleDataBadge, Select, StatusBadge } from "@/shared/ui/primitives";
+import { Card, CardHeader, cx, ErrorState, KpiCard, PageHeader, PageSkeleton, SampleDataBadge, Select, StatusBadge, useGreeting } from "@/shared/ui/primitives";
 import { BarsChart, ChartCard, chartColors, DonutChart, Legend, TrendChart } from "@/shared/ui/charts";
 
 type Overview = {
@@ -32,6 +32,7 @@ export default function OverviewPage() {
   const [days, setDays] = useState(30);
   const { data, error, loading, reload } = useApi<Overview>(`/admin/overview?days=${days}`);
   const { fmt, persona } = useSession();
+  const { greeting, today } = useGreeting(persona.name);
 
   if (loading) return <PageSkeleton />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
@@ -43,9 +44,9 @@ export default function OverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow={`Good day, ${persona.name.split(" ")[0]}`}
-        title="Overview"
-        description="Marketplace health at a glance. GMV, SecretWish revenue and vendor earnings are reported separately."
+        eyebrow={today || "Overview"}
+        title={greeting}
+        description="Here's how the marketplace is doing. GMV, SecretWish revenue and vendor earnings are reported separately."
         actions={
           <>
             {data.sampleData && <SampleDataBadge />}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Bell, ChevronDown, ChevronsLeft, ChevronsRight, KeyRound, LogOut, Menu, type LucideIcon, Search } from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, Menu, type LucideIcon, PanelLeftClose, PanelLeftOpen, Search, Sparkles } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
 import { APP_NAMES, APP_URLS, AUTH_URL, isSampleEmail, useSession, type AppName } from "../lib/session";
 import { currencySymbol, timeAgo } from "../lib/format";
@@ -15,6 +15,13 @@ export type NavSection = { title?: string; items: NavItem[] };
 
 /** app: where link opens; null for older notifications, which open in the current app. */
 type Notification = { id: string; title: string; body: string; link: string; app: AppName | null; read: boolean; at: string; type: string };
+
+/** The soft, airy page background every app shares (lilac, sky and champagne glows on ivory). */
+export const pageBackground =
+  "bg-[#f5f1f8] bg-[radial-gradient(1100px_520px_at_6%_-10%,#ecdff5_0%,transparent_60%),radial-gradient(900px_520px_at_100%_-4%,#e3ebf8_0%,transparent_58%),radial-gradient(900px_640px_at_55%_115%,#f7ead6_0%,transparent_60%)] bg-fixed";
+/** Frosted surfaces: the sidebar, top bar and round buttons. */
+const glass = "border border-white/80 bg-white/70 shadow-[0_1px_2px_rgb(43_23_54/0.04),0_10px_30px_rgb(43_23_54/0.06)] backdrop-blur-xl";
+const roundButton = `grid size-10 place-items-center rounded-full text-ink-700 transition hover:bg-white ${glass}`;
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
@@ -50,13 +57,13 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-        className="relative grid size-10 place-items-center rounded-xl text-ink-700 hover:bg-ink-100"
+        className={cx("relative", roundButton)}
       >
-        <Bell className="size-5" aria-hidden />
-        {unread > 0 && <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-danger-600 px-1 text-[10px] font-bold text-white">{unread}</span>}
+        <Bell className="size-[18px]" aria-hidden />
+        {unread > 0 && <span className="absolute -top-0.5 -right-0.5 grid min-w-[18px] place-items-center rounded-full bg-danger-600 px-1 text-[10px] leading-[18px] font-bold text-white ring-2 ring-white">{unread}</span>}
       </button>
       {open && (
-        <div className={cx("absolute top-12 z-40 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-ink-200 bg-white shadow-[var(--shadow-pop)]", align === "right" ? "right-0" : "left-0")}>
+        <div className={cx("absolute top-12 z-40 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[22px] border border-white bg-white/95 shadow-[var(--shadow-pop)] backdrop-blur-xl", align === "right" ? "right-0" : "left-0")}>
           <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3">
             <p className="text-sm font-semibold">Notifications</p>
             <button type="button" className="text-xs font-semibold text-plum-700 hover:underline disabled:opacity-40" disabled={!unread} onClick={() => markAll.run()}>
@@ -110,7 +117,7 @@ export function CurrencyToggle() {
         value={currency}
         onChange={(e) => setCurrency(e.target.value)}
         title={currency === "USD" ? "Base currency" : `Converted at ${rate(currency)} ${currency} per $1 (sample rate)`}
-        className="h-9 cursor-pointer rounded-xl border-0 bg-ink-100 py-0 pr-7 pl-2.5 text-xs font-semibold text-plum-800 focus:ring-2 focus:ring-plum-200"
+        className={cx("h-10 cursor-pointer rounded-full py-0 pr-8 pl-3.5 text-xs font-semibold text-plum-800 focus:ring-2 focus:ring-plum-200", glass)}
       >
         {options.map((c) => (
           <option key={c.code} value={c.code}>
@@ -122,7 +129,8 @@ export function CurrencyToggle() {
   );
 }
 
-function PersonaMenu({ subtitle }: { subtitle: string }) {
+/** compact: avatar only (the name and details are in the menu), for crowded top bars. */
+function PersonaMenu({ subtitle, compact }: { subtitle: string; compact?: boolean }) {
   const { persona, signOut, isDemo } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -134,15 +142,15 @@ function PersonaMenu({ subtitle }: { subtitle: string }) {
   }, [open]);
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex items-center gap-2.5 rounded-xl p-1 pr-2 hover:bg-ink-100">
-        <Avatar name={persona.name} size={34} />
-        <span className="hidden text-left leading-tight lg:block">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={compact ? `Account menu for ${persona.name}` : undefined} className={cx("flex items-center gap-2.5 rounded-full p-1 transition hover:bg-white", !compact && "lg:pr-4", glass)}>
+        <Avatar name={persona.name} size={32} />
+        <span className={cx("hidden text-left leading-tight whitespace-nowrap", !compact && "lg:block")}>
           <span className="block text-[13px] font-semibold">{persona.name}</span>
           <span className="block text-[11px] text-ink-500">{subtitle}</span>
         </span>
       </button>
       {open && (
-        <div className="absolute top-12 right-0 z-40 w-64 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-pop)]">
+        <div className="absolute top-12 right-0 z-40 w-64 rounded-[22px] border border-white bg-white/95 p-2 shadow-[var(--shadow-pop)] backdrop-blur-xl">
           <div className="px-3 py-2">
             <p className="text-sm font-semibold">{persona.name}</p>
             <p className="truncate text-xs text-ink-500">{persona.email}</p>
@@ -216,29 +224,29 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
   }, [pathname]);
 
   const nav = (compact: boolean) => (
-    <nav aria-label="Main" className={cx("flex-1 overflow-y-auto px-3 py-3 scrollbar-thin", compact ? "space-y-2" : "space-y-1")}>
+    <nav aria-label="Main" className={cx("flex-1 overflow-y-auto px-3 py-2 scrollbar-thin", compact ? "space-y-2" : "space-y-2")}>
       {sections.map((s, i) => {
         // The icon-only rail shows every item; the full menu folds by section.
         const open = compact || isOpen(s);
         const waiting = s.items.reduce((n, it) => n + (typeof it.badge === "number" ? it.badge : 0), 0);
         const listId = `nav-${i}`;
         return (
-        <div key={i} className={cx(compact && i > 0 && "border-t border-white/5 pt-2")}>
+        <div key={i} className={cx(compact && i > 0 && "border-t border-ink-200/60 pt-2", !compact && i > 0 && "border-t border-ink-200/50 pt-2")}>
           {s.title && !compact && (
             <button
               type="button"
               onClick={() => fold(s.title!, !open)}
               aria-expanded={open}
               aria-controls={listId}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-plum-300/80 uppercase hover:bg-white/5 hover:text-white"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-medium text-ink-400 hover:bg-white/60 hover:text-ink-700"
             >
               <span className="flex-1 text-left">{s.title}</span>
-              {!open && waiting > 0 && <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-bold tracking-normal text-plum-950">{waiting}</span>}
+              {!open && waiting > 0 && <span className="rounded-full bg-plum-800 px-1.5 text-[10px] font-bold text-white">{waiting}</span>}
               <ChevronDown className={cx("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden />
             </button>
           )}
           {open && (
-          <ul id={listId} className="space-y-px pb-1">
+          <ul id={listId} className="space-y-0.5 pb-1">
             {s.items.map((it) => {
               const active = isActive(pathname, it.href);
               return (
@@ -248,14 +256,16 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
                     aria-current={active ? "page" : undefined}
                     title={compact ? it.label : undefined}
                     className={cx(
-                      "group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                      active ? "bg-gold-500/15 text-gold-300" : "text-plum-100/80 hover:bg-white/5 hover:text-white",
-                      compact && "justify-center px-0",
+                      "group flex items-center gap-3 rounded-2xl px-3 py-2 text-[13px] font-medium transition",
+                      active
+                        ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(43_23_54/0.05),0_6px_16px_rgb(43_23_54/0.07)]"
+                        : "text-ink-700 hover:bg-white/60 hover:text-ink-900",
+                      compact && "justify-center px-0 py-2.5",
                     )}
                   >
-                    <it.icon className={cx("size-4 shrink-0", active ? "text-gold-400" : "text-plum-300 group-hover:text-white")} aria-hidden />
+                    <it.icon className={cx("size-[18px] shrink-0", active ? "text-plum-700" : "text-ink-500 group-hover:text-ink-900")} aria-hidden />
                     {!compact && <span className="flex-1 truncate">{it.label}</span>}
-                    {!compact && it.badge !== undefined && it.badge !== 0 && <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-bold text-plum-950">{it.badge}</span>}
+                    {!compact && it.badge !== undefined && it.badge !== 0 && <span className="rounded-full bg-plum-800 px-1.5 py-px text-[10px] font-bold text-white">{it.badge}</span>}
                   </Link>
                 </li>
               );
@@ -269,41 +279,46 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
   );
 
   return (
-    <div className="flex min-h-screen">
+    <div className={cx("flex min-h-screen", pageBackground)}>
       <a href="#main" className="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
-      <aside className={cx("sticky top-0 hidden h-screen shrink-0 flex-col bg-plum-950 text-ivory-50 transition-[width] md:flex", collapsed ? "w-[68px]" : "w-60")}>
-        <div className={cx("flex h-16 items-center border-b border-white/5 px-4", collapsed ? "justify-center" : "justify-between")}>
-          <Logo suffix={suffix} compact={collapsed} />
-          {!collapsed && (
-            <button type="button" onClick={toggle} className="rounded-lg p-1.5 text-plum-300 hover:bg-white/10 hover:text-white" aria-label="Collapse sidebar">
-              <ChevronsLeft className="size-4" />
+      {/* A floating, frosted sidebar; folds to an icon rail. */}
+      <aside className={cx("sticky top-0 hidden h-screen shrink-0 p-3 pr-0 transition-[width] md:block", collapsed ? "w-[88px]" : "w-[268px]")}>
+        <div className={cx("flex h-full flex-col rounded-[28px] text-ink-900", glass)}>
+          <div className={cx("flex h-16 items-center px-4 text-plum-900", collapsed ? "justify-center" : "justify-between")}>
+            <Logo suffix={suffix} compact={collapsed} />
+            {!collapsed && (
+              <button type="button" onClick={toggle} className="grid size-8 place-items-center rounded-xl text-ink-500 hover:bg-white hover:text-ink-900" aria-label="Collapse sidebar">
+                <PanelLeftClose className="size-[18px]" />
+              </button>
+            )}
+          </div>
+          {nav(collapsed)}
+          {collapsed ? (
+            <button type="button" onClick={toggle} className="mx-auto mb-4 grid size-10 place-items-center rounded-xl text-ink-500 hover:bg-white hover:text-ink-900" aria-label="Expand sidebar">
+              <PanelLeftOpen className="size-[18px]" />
             </button>
+          ) : (
+            <SidebarCard sample={sample} />
           )}
         </div>
-        {nav(collapsed)}
-        {collapsed && (
-          <button type="button" onClick={toggle} className="m-3 grid place-items-center rounded-lg p-2 text-plum-300 hover:bg-white/10 hover:text-white" aria-label="Expand sidebar">
-            <ChevronsRight className="size-4" />
-          </button>
-        )}
-        {!collapsed && <p className="border-t border-white/5 px-5 py-3 text-[11px] text-plum-300/70">Prototype · synthetic data</p>}
       </aside>
 
       <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} label="Navigation">
-        <div className="flex h-full flex-col bg-plum-950 text-ivory-50">
-          <div className="flex h-16 items-center px-4">
+        <div className={cx("flex h-full flex-col text-ink-900", pageBackground)}>
+          <div className="flex h-16 items-center px-5 text-plum-900">
             <Logo suffix={suffix} />
           </div>
           {nav(false)}
+          <SidebarCard sample={sample} />
         </div>
       </Drawer>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-200/70 bg-white/85 px-4 backdrop-blur md:px-6">
-          <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ink-700 hover:bg-ink-100 md:hidden" aria-label="Open navigation">
-            <Menu className="size-5" />
+        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-2.5 bg-gradient-to-b from-[#f5f1f8] via-[#f5f1f8]/85 to-transparent px-4 md:px-6">
+          <button type="button" onClick={() => setMobileOpen(true)} className={cx(roundButton, "md:hidden")} aria-label="Open navigation">
+            <Menu className="size-[18px]" />
           </button>
           {onSearch ? (
             <form
@@ -314,7 +329,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
                 onSearch(q);
               }}
             >
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-400" aria-hidden />
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-ink-400" aria-hidden />
               <label htmlFor="global-search" className="sr-only">
                 Search
               </label>
@@ -323,7 +338,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-10 w-full rounded-xl border border-transparent bg-ink-100/70 pr-3 pl-9 text-sm placeholder:text-ink-400 focus:border-plum-300 focus:bg-white focus:outline-none"
+                className={cx("h-10 w-full rounded-full pr-4 pl-10 text-sm placeholder:text-ink-400 focus:border-plum-300 focus:bg-white focus:outline-none", glass)}
               />
             </form>
           ) : (
@@ -340,7 +355,7 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
             <PersonaMenu subtitle={subtitle} />
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1680px] min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 2xl:px-8">
+        <main id="main" className="mx-auto w-full max-w-[1680px] min-w-0 flex-1 px-4 pt-2 pb-8 md:px-6 2xl:px-8">
           {children}
         </main>
       </div>
@@ -353,16 +368,17 @@ export function ConsumerShell({ items, children, tagline }: { items: NavItem[]; 
   const pathname = usePathname();
   const { persona } = useSession();
   return (
-    <div className="min-h-screen pb-20 md:pb-0">
+    <div className={cx("min-h-screen pb-28 md:pb-0", pageBackground)}>
       <a href="#main" className="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 border-b border-ink-200/60 bg-ivory-50/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <Link href="/" className="text-plum-900" aria-label="SecretWish home">
+      <header className="sticky top-0 z-30 px-3 pt-3 md:px-4">
+        <div className={cx("mx-auto flex h-16 max-w-6xl items-center gap-3 rounded-[24px] pr-2 pl-4", glass)}>
+          <Link href="/" className="shrink-0 text-plum-900" aria-label="SecretWish home">
             <Logo suffix={tagline} />
           </Link>
-          <nav aria-label="Main" className="ml-6 hidden items-center gap-1 md:flex">
+          {/* Pill tabs, like a segmented control; the current page's icon sits in a dark disc. */}
+          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 rounded-full bg-ink-100/60 p-1 md:flex">
             {items.map((it) => {
               const active = isActive(pathname, it.href);
               return (
@@ -370,40 +386,67 @@ export function ConsumerShell({ items, children, tagline }: { items: NavItem[]; 
                   key={it.href}
                   href={it.href}
                   aria-current={active ? "page" : undefined}
-                  className={cx("rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors", active ? "bg-plum-800 text-ivory-50" : "text-ink-700 hover:bg-plum-50")}
+                  title={it.label}
+                  className={cx(
+                    "inline-flex items-center gap-2 rounded-full p-1 text-[13px] font-semibold whitespace-nowrap transition xl:pr-3.5",
+                    active ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(43_23_54/0.06),0_4px_12px_rgb(43_23_54/0.08)]" : "text-ink-500 hover:bg-white/60 hover:text-ink-900",
+                  )}
                 >
-                  {it.label}
+                  <span className={cx("grid size-7 place-items-center rounded-full", active ? "bg-plum-900 text-ivory-50" : "text-current")}>
+                    <it.icon className="size-[15px]" aria-hidden />
+                  </span>
+                  {/* Labels show on wide screens; in between, icons with the label as a tooltip and for screen readers. */}
+                  <span className="sr-only xl:not-sr-only xl:whitespace-nowrap">{it.label}</span>
                 </Link>
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <div className="hidden sm:block">
               <CurrencyToggle />
             </div>
             <NotificationBell />
-            <PersonaMenu subtitle={persona.city} />
+            <PersonaMenu subtitle={persona.city} compact />
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6 md:py-10">
+      <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8">
         {children}
       </main>
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-200 bg-white/95 backdrop-blur md:hidden">
+      {/* Phones: a floating tab bar. */}
+      <nav aria-label="Main" className={cx("fixed inset-x-3 bottom-3 z-30 rounded-[26px] px-1.5 py-1.5 md:hidden", glass, "bg-white/85")}>
         <ul className="mx-auto grid max-w-md" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
           {items.map((it) => {
             const active = isActive(pathname, it.href);
             return (
               <li key={it.href}>
-                <Link href={it.href} aria-current={active ? "page" : undefined} className={cx("flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold", active ? "text-plum-800" : "text-ink-400")}>
-                  <it.icon className={cx("size-5", active && "text-plum-700")} aria-hidden />
-                  {it.label}
+                <Link href={it.href} aria-current={active ? "page" : undefined} className={cx("flex min-w-0 flex-col items-center gap-1 rounded-[20px] px-0.5 py-1.5 text-[10px] font-semibold", active ? "text-plum-900" : "text-ink-400")}>
+                  <span className={cx("grid h-8 w-full max-w-12 place-items-center rounded-full transition", active && "bg-plum-900 text-ivory-50")}>
+                    <it.icon className="size-[18px]" aria-hidden />
+                  </span>
+                  <span className="max-w-full truncate">{it.label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+/** The card at the foot of the sidebar: what SecretWish promises, and a note when the data is sample data. */
+function SidebarCard({ sample }: { sample: boolean }) {
+  return (
+    <div className="relative m-3 overflow-hidden rounded-[22px] bg-gradient-to-br from-plum-700 via-plum-800 to-plum-950 p-4 text-ivory-50">
+      <span aria-hidden className="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full border border-white/10" />
+      <span aria-hidden className="pointer-events-none absolute -right-4 -bottom-12 size-28 rounded-full bg-gold-500/20 blur-2xl" />
+      <span className="relative grid size-8 place-items-center rounded-full bg-white/15">
+        <Sparkles className="size-4 text-gold-300" aria-hidden />
+      </span>
+      <p className="relative mt-3 text-sm font-semibold">Discreet by design</p>
+      <p className="relative mt-0.5 text-[11px] leading-relaxed text-plum-200">Every surprise stays a secret until it arrives.</p>
+      {sample && <p className="relative mt-3 rounded-full bg-white/10 px-3 py-1.5 text-center text-[11px] font-semibold text-gold-300">Showing sample data</p>}
     </div>
   );
 }
