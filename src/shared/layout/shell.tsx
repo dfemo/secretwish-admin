@@ -197,31 +197,15 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
       return !c;
     });
   };
-  // Menu sections fold away to keep the sidebar short. Choices are remembered per browser; until someone chooses, only the
-  // section holding the current page is open. Going to a page opens its section, and any section can be folded again.
-  const [folds, setFolds] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    try {
-      setFolds(JSON.parse(localStorage.getItem("secretwish.nav.open") ?? "{}"));
-    } catch {}
-  }, []);
+  // Menu sections work like an accordion, so the sidebar never grows long: at most one section is open. It's the section holding the
+  // current page until someone opens another; opening a section folds every other one, and going to a page opens its section and
+  // folds the rest. Any section can also be folded by itself.
   const holdsCurrent = (sec: NavSection) => sec.items.some((it) => isActive(pathname, it.href));
-  const isOpen = (sec: NavSection) => !sec.title || (folds[sec.title] ?? holdsCurrent(sec));
-  const fold = (title: string, open: boolean) =>
-    setFolds((f) => {
-      const next = { ...f, [title]: open };
-      try {
-        localStorage.setItem("secretwish.nav.open", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  // Arriving on a page (by link, search or the address bar) opens its section once; folding it afterwards sticks.
-  const current = sections.find((sec) => sec.title && holdsCurrent(sec))?.title;
-  useEffect(() => {
-    if (current && folds[current] === false) fold(current, true);
-    // Only when the page changes, not on every fold.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  const current = sections.find((sec) => sec.title && holdsCurrent(sec))?.title ?? null;
+  const [openTitle, setOpenTitle] = useState<string | null>(current);
+  useEffect(() => setOpenTitle(current), [current, pathname]);
+  const isOpen = (sec: NavSection) => !sec.title || sec.title === openTitle;
+  const fold = (title: string, open: boolean) => setOpenTitle(open ? title : null);
 
   const nav = (compact: boolean) => (
     <nav aria-label="Main" className={cx("flex-1 overflow-y-auto px-3 py-2 scrollbar-thin", compact ? "space-y-2" : "space-y-2")}>
