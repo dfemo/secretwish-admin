@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Lock, ShieldPlus, UsersRound } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
@@ -43,7 +44,10 @@ function Users() {
         <div className="flex items-center gap-3">
           <Avatar name={u.name} size={32} />
           <div className="min-w-0">
-            <p className="font-semibold">{u.name}{u.isMe && <span className="ml-1 text-xs font-normal text-ink-500">(you)</span>}</p>
+            <p className="font-semibold">
+              <Link href={`/customers/${u.id}`} className="text-plum-800 hover:underline">{u.name}</Link>
+              {u.isMe && <span className="ml-1 text-xs font-normal text-ink-500">(you)</span>}
+            </p>
             <p className="break-all text-xs text-ink-500">{u.email ?? u.phone ?? "No contact details"}</p>
           </div>
         </div>
