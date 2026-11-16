@@ -57,9 +57,10 @@ export function ButtonLink({ href, variant = "primary", size = "md", icon: Icon,
 }
 
 // ---------------- Surfaces ----------------
+// min-w-0 lets a card shrink to its grid column, so wide content (a select with long options) can't push the page wider than a phone.
 export function Card({ className, children, ...rest }: Omit<ComponentProps<"section">, "ref">) {
   return (
-    <section className={cx("rounded-[24px] border border-white/90 bg-white/80 shadow-[0_1px_2px_rgb(43_23_54/0.04),0_12px_32px_rgb(43_23_54/0.06)] backdrop-blur-md", className)} {...rest}>
+    <section className={cx("min-w-0 rounded-[24px] border border-white/90 bg-white/80 shadow-[0_1px_2px_rgb(43_23_54/0.04),0_12px_32px_rgb(43_23_54/0.06)] backdrop-blur-md", className)} {...rest}>
       {children}
     </section>
   );

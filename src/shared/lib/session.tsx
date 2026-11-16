@@ -323,10 +323,12 @@ function DateOfBirthPrompt({ app, onSaved }: { app: AppName; onSaved: () => Prom
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  // SecretWish is 18+, so the picker stops at the latest date of birth that's old enough.
+  const latest = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().slice(0, 10); })();
   async function save(e: FormEvent) {
     e.preventDefault();
     if (!value) return setError("Enter your date of birth.");
+    if (value > latest) return setError("You must be 18 or older to use SecretWish.");
     setBusy(true);
     setError(null);
     try {
@@ -343,10 +345,10 @@ function DateOfBirthPrompt({ app, onSaved }: { app: AppName; onSaved: () => Prom
       <form onSubmit={save} className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
         <Cake aria-hidden className="h-5 w-5 shrink-0 text-plum-700" />
         <p className="min-w-0 flex-1 text-sm">
-          <span className="font-semibold">Add your date of birth</span> to {app === "recipient" ? "create wishlists (and your birthday wishlist)" : "send gifts"}. It can only be set once.
+          <span className="font-semibold">Add your date of birth</span> to {app === "recipient" ? "create wishlists (and your birthday wishlist)" : "send gifts"}. You must be 18 or older, and it can only be set once.
         </p>
         <label className="sr-only" htmlFor="dob-prompt">Date of birth</label>
-        <input id="dob-prompt" type="date" max={today} value={value} onChange={(e) => setValue(e.target.value)} autoComplete="bday"
+        <input id="dob-prompt" type="date" max={latest} value={value} onChange={(e) => setValue(e.target.value)} autoComplete="bday"
           className="h-10 rounded-xl border border-ink-200 bg-white px-3 text-sm" />
         <Button size="sm" type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
         {error && <p role="alert" className="w-full text-sm text-red-700">{error}</p>}
