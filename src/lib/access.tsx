@@ -39,6 +39,7 @@ export const areaPermission: Record<string, Permission> = {
   "/team": "team.view",
   "/roles": "team.view",
   "/settings": "settings.view",
+  "/pricing": "settings.view",
 };
 
 export function permissionFor(pathname: string): Permission | undefined {
