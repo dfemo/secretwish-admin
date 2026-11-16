@@ -155,9 +155,10 @@ export function SampleDataSettings() {
   const toast = useToast();
   const remove = useMutation(() => api<{ users: number; vendors: number; orders: number }>("/admin/settings/remove-sample-data", { method: "POST" }));
   const load = useMutation(() => api<{ people: number; stores: number }>("/admin/settings/load-sample-data", { method: "POST" }));
-  if (!data) return null;
+  // Only super admins can load or remove it, so nobody else sees the card.
+  if (!data || !data.canRemove) return null;
   const present = data.people > 0 || data.stores > 0;
-  // Nothing to offer someone who can't load or remove it, when there's none.
+  // Nothing to offer when there's none and this deployment can't load it.
   if (!present && !data.canLoad) return null;
 
   return (
@@ -179,7 +180,6 @@ export function SampleDataSettings() {
         <div className="flex flex-wrap gap-2">
           {!data.loaded && data.canLoad && <Button icon={DatabaseZap} onClick={() => setConfirm("load")}>Load sample data</Button>}
           {present && data.canRemove && <Button variant="secondary" icon={Trash2} onClick={() => setConfirm("remove")}>Remove sample data</Button>}
-          {!data.canRemove && <p className="text-xs text-ink-500">Only super admins can {present ? "remove" : "load"} it.</p>}
         </div>
       </div>
       <ConfirmDialog
@@ -217,6 +217,66 @@ export function SampleDataSettings() {
           }
         }}
       />
+    </Card>
+  );
+}
+
+const CONFIRM_WORDS = "DELETE ALL DATA";
+
+/** Super admins only: wipes every customer and vendor account and everything on the marketplace, for a fresh start. The admin
+ * team, settings, categories and currencies stay. Needs the confirmation words typed in. */
+export function AllDataSettings() {
+  const { data } = useApi<{ canRemove: boolean }>("/admin/settings/sample-data");
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const toast = useToast();
+  const remove = useMutation(() =>
+    api<{ users: number; vendors: number; orders: number; wishlists: number }>("/admin/settings/remove-all-data", { method: "POST", body: { confirm: typed } }),
+  );
+  if (!data?.canRemove) return null;
+  const close = () => { setOpen(false); setTyped(""); remove.setError(null); };
+
+  return (
+    <Card className="mt-6 !border-danger-600/20">
+      <CardHeader title="Delete all data" description="Start the marketplace afresh. Only super admins see this." />
+      <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+        <p className="max-w-2xl text-sm text-ink-700">
+          Permanently deletes every customer and vendor account, store, product, wishlist, surprise request, order, payment, payout, cash gift, ticket,
+          notification, contact message and the audit log. The admin team&apos;s accounts, platform settings, categories, currencies and roles stay.
+        </p>
+        <Button variant="danger" icon={Trash2} onClick={() => setOpen(true)}>Delete all data</Button>
+      </div>
+      <Modal
+        open={open}
+        onClose={close}
+        title="Delete all data?"
+        description="Everyone except the admin team loses their account, and everything on the marketplace is gone. This can't be undone."
+        footer={
+          <>
+            <Button variant="ghost" onClick={close}>Cancel</Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              disabled={typed.trim() !== CONFIRM_WORDS}
+              loading={remove.pending}
+              onClick={async () => {
+                const r = await remove.run();
+                if (r) {
+                  toast({ tone: "success", title: "All data deleted", body: `${r.users} people, ${r.vendors} stores, ${r.orders} orders and ${r.wishlists} wishlists removed.` });
+                  close();
+                }
+              }}
+            >
+              Delete everything
+            </Button>
+          </>
+        }
+      >
+        <Field label={`Type ${CONFIRM_WORDS} to confirm`}>
+          {(id, d) => <Input id={id} aria-describedby={d} value={typed} autoComplete="off" className="font-mono" onChange={(e) => setTyped(e.target.value)} />}
+        </Field>
+        {remove.error && <Notice className="mt-4" tone="danger">{remove.error.message}</Notice>}
+      </Modal>
     </Card>
   );
 }
