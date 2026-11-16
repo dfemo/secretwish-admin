@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Cake, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { ArrowLeft, Cake, Gift, Heart, LogIn, ShieldCheck, Sparkles, Store, UserPlus } from "lucide-react";
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import { API_URL, api, setAccessTokenProvider, setDemoUser, useApi } from "./api";
 import { guessCurrency, money, type Currency } from "./format";
@@ -412,44 +412,95 @@ function OpenYourStore({ vendor, onSubmitted }: { vendor: VendorSummary | null; 
   );
 }
 
+/** Which apps the "One SecretWish account" card names. */
+const everyApp: { label: string; icon: typeof Gift }[] = [
+  { label: "Send", icon: Gift },
+  { label: "Wishlists", icon: Heart },
+  { label: "Vendors", icon: Store },
+  { label: "Team", icon: ShieldCheck },
+];
+
+/**
+ * The signed-out screen: a dark card with sign-in, sign-up and (in demo mode) the demo personas, beside a plum panel with the app's
+ * own headline and a card saying one account works everywhere. Stacks on phones with sign-in first.
+ */
 function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: AppName; intro: ReactNode; demoEnabled: boolean; onPick: (p: Persona) => void; websiteUrl?: string }) {
   return (
-    <main className="min-h-screen bg-plum-950 px-4 py-10 text-ivory-50">
-      <nav aria-label="Other SecretWish apps" className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[13px]">
-        <a href={websiteUrl && websiteUrl !== "/" ? websiteUrl : WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-300 hover:text-ivory-50">
+    <main className="min-h-screen bg-[#2a1d31] px-4 py-6 text-ivory-50 sm:px-6 md:py-10">
+      <nav aria-label="Other SecretWish apps" className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-3 text-[13px] md:mb-4">
+        <a href={websiteUrl && websiteUrl !== "/" ? websiteUrl : WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-200 hover:text-ivory-50">
           <ArrowLeft className="size-4" aria-hidden /> Back to SecretWish home
         </a>
         {app !== "admin" && (
-          <span className="flex flex-wrap items-center gap-1">
+          <span className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-plum-300">Switch to</span>
             {appLinks.filter((l) => l.app !== app).map((l) => (
-              <a key={l.app} href={l.href} className="rounded-full border border-plum-700 px-3 py-1 font-semibold text-ivory-50 hover:border-gold-400 hover:text-gold-400">
+              <a key={l.app} href={l.href} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-semibold text-ivory-50 hover:border-gold-400 hover:text-gold-400">
                 {l.label}
               </a>
             ))}
           </span>
         )}
       </nav>
-      <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-[1.1fr_1fr]">
-        <div>
-          <Logo suffix={app === "admin" ? "Operations" : app === "vendor" ? "Vendor" : undefined} />
-          <div className="mt-10">{intro}</div>
-          <p className="mt-8 flex items-center gap-2 text-xs text-plum-300">
-            <ShieldCheck className="size-4 text-gold-400" aria-hidden /> One SecretWish account works across every app.
-          </p>
-        </div>
-        <div className="rounded-3xl bg-ivory-50 p-6 text-ink-900 shadow-[var(--shadow-pop)]">
-          <h2 className="font-display text-xl font-semibold text-plum-900">Welcome to SecretWish</h2>
-          <div className="mt-4 grid gap-2">
-            <Button icon={LogIn} onClick={() => startSignIn(app)}>Sign in</Button>
-            {app === "admin" ? (
-              // Team accounts are created by a super admin; nobody can sign up as staff.
-              <p className="text-xs text-ink-500">Team accounts are created by a SecretWish super admin. Sign in with the email they added for you.</p>
-            ) : (
-              <Button icon={UserPlus} variant="secondary" onClick={() => startSignIn(app, "signup")}>Create an account</Button>
-            )}
+
+      <div className="mx-auto max-w-6xl md:pt-14">
+        <div className="relative grid overflow-visible rounded-[32px] bg-[#120914] shadow-[0_40px_90px_rgba(0,0,0,0.45)] md:grid-cols-2">
+          {/* Soft glow behind the sign-in side. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
+            <div className="absolute top-1/3 left-[28%] size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,58,123,0.55)_0%,rgba(201,164,92,0.12)_40%,transparent_70%)] blur-2xl" />
           </div>
-          {demoEnabled && <DemoPersonas app={app} onPick={onPick} />}
+
+          {/* Sign in */}
+          <section aria-labelledby="welcome" className="relative z-10 flex flex-col px-6 py-10 sm:px-12 md:py-14">
+            <Logo suffix={app === "admin" ? "Operations" : app === "vendor" ? "Vendor" : undefined} />
+            <div className="my-auto max-w-sm pt-10 md:pt-14">
+              <h2 id="welcome" className="font-display text-3xl font-semibold sm:text-4xl">Welcome to SecretWish</h2>
+              <p className="mt-2 text-[15px] text-plum-200">Sign in with your SecretWish account{app === "admin" ? "." : ", or create one in a minute."}</p>
+              <div className="mt-8 grid gap-3">
+                <button type="button" onClick={() => startSignIn(app)}
+                  className="inline-flex h-13 min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold-400 to-gold-500 px-5 text-[15px] font-bold text-plum-950 shadow-[0_12px_30px_rgba(201,164,92,0.25)] transition hover:brightness-105 active:translate-y-px">
+                  <LogIn className="size-5" aria-hidden /> Sign in
+                </button>
+                {app === "admin" ? (
+                  // Team accounts are created by a super admin; nobody can sign up as staff.
+                  <p className="text-xs leading-relaxed text-plum-300">Team accounts are created by a SecretWish super admin. Sign in with the email they added for you.</p>
+                ) : (
+                  <button type="button" onClick={() => startSignIn(app, "signup")}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-5 text-[15px] font-semibold text-ivory-50 transition hover:border-white/30 hover:bg-white/10">
+                    <UserPlus className="size-5" aria-hidden /> Create an account
+                  </button>
+                )}
+              </div>
+              {demoEnabled && <DemoPersonas app={app} onPick={onPick} />}
+            </div>
+          </section>
+
+          {/* The app's own story, in a lighter panel that rises above the card. */}
+          <section aria-label="About SecretWish" className="relative z-10 p-3 md:-mt-14 md:p-0 md:py-0 md:pr-0">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-plum-500 via-plum-600 to-plum-800 px-7 pt-10 pb-6 sm:px-10 md:pt-16 md:pb-8">
+              {/* Notched corner, as on a gift tag. */}
+              <span aria-hidden className="absolute -top-px -right-px hidden h-14 w-24 rounded-bl-[28px] bg-[#2a1d31] md:block" />
+              <span aria-hidden className="pointer-events-none absolute -right-24 bottom-24 size-72 rounded-full border border-white/10" />
+              <span aria-hidden className="pointer-events-none absolute right-10 bottom-40 size-40 rounded-full border border-gold-300/20" />
+              <div className="relative max-w-md md:pr-10">{intro}</div>
+              <div className="relative mt-auto pt-10 md:pt-16">
+                <div className="relative rounded-[24px] bg-ivory-50 p-6 text-ink-900 shadow-[0_24px_50px_rgba(18,9,20,0.35)] md:mr-14">
+                  <span aria-hidden className="absolute -top-6 -right-6 grid size-14 place-items-center rounded-full bg-ivory-50 text-plum-800 ring-8 ring-plum-700">
+                    <Sparkles className="size-6" />
+                  </span>
+                  <p className="font-display text-xl leading-snug font-semibold text-plum-900">One SecretWish account works across every app.</p>
+                  <p className="mt-1.5 text-sm text-ink-500">Send surprises, keep wishlists, run a store or help run SecretWish, all with the same sign-in.</p>
+                  <ul className="mt-4 flex flex-wrap gap-2" aria-label="Apps">
+                    {everyApp.map(({ label, icon: Icon }) => (
+                      <li key={label} className="inline-flex items-center gap-1.5 rounded-full bg-plum-50 px-3 py-1 text-xs font-semibold text-plum-700">
+                        <Icon className="size-3.5" aria-hidden /> {label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>
@@ -459,28 +510,29 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
 function DemoPersonas({ app, onPick }: { app: AppName; onPick: (p: Persona) => void }) {
   const { data, error, loading, reload } = useApi<Persona[]>(`/demo/personas?app=${app}`);
   return (
-    <div className="mt-6 border-t border-ink-200 pt-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-plum-900">Or try a demo persona</h3>
-        <Badge tone="gold" icon={Sparkles}>Demo</Badge>
+    <div className="mt-8">
+      <div className="flex items-center gap-3 text-xs font-semibold tracking-wider text-plum-300 uppercase">
+        <span className="h-px flex-1 bg-white/10" /> Or try a demo persona <span className="h-px flex-1 bg-white/10" />
       </div>
-      <p className="mt-1 text-xs text-ink-500">Synthetic people and data, simulated payments.</p>
-      <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+      <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-plum-300">
+        <Sparkles className="size-3.5 text-gold-400" aria-hidden /> Synthetic people and data, simulated payments.
+      </p>
+      <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
         {loading && <Spinner label="Loading personas" />}
-        {error && <ErrorState error={error} onRetry={reload} />}
+        {error && <div className="rounded-2xl bg-ivory-50 text-ink-900"><ErrorState error={error} onRetry={reload} /></div>}
         {data?.map((p) => (
           <button
             key={p.id}
             type="button"
             onClick={() => onPick(p)}
-            className="flex w-full items-center gap-3 rounded-2xl border border-ink-200 bg-white p-3 text-left transition hover:border-plum-300 hover:bg-plum-50"
+            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-gold-400/60 hover:bg-white/[0.08]"
           >
             <Avatar name={p.name} />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">{p.name}</span>
-              <span className="block truncate text-xs text-ink-500">{p.vendorName ? `${p.vendorName} · ${p.city}` : `${roleLabels[p.role] ?? p.role} · ${p.city}`}</span>
+              <span className="block text-sm font-semibold text-ivory-50">{p.name}</span>
+              <span className="block truncate text-xs text-plum-300">{p.vendorName ? `${p.vendorName} · ${p.city}` : `${roleLabels[p.role] ?? p.role} · ${p.city}`}</span>
             </span>
-            <span className="text-xs font-semibold text-plum-700">Continue →</span>
+            <span className="text-xs font-semibold text-gold-400">Continue →</span>
           </button>
         ))}
       </div>
