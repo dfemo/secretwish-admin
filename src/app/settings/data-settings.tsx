@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { DatabaseZap, Plus, Trash2 } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { Button, Card, CardHeader, Field, Input, Notice } from "@/shared/ui/primitives";
 import { moneyIn } from "@/shared/lib/format";
@@ -150,28 +150,41 @@ function AddCurrencyModal({ open, taken, onClose, onAdded }: { open: boolean; ta
 
 /** Lets a super admin delete the sample data the demo seeded, keeping real accounts. */
 export function SampleDataSettings() {
-  const { data, reload } = useApi<{ people: number; stores: number; canRemove: boolean }>("/admin/settings/sample-data");
-  const [confirm, setConfirm] = useState(false);
+  const { data, reload } = useApi<{ people: number; stores: number; loaded: boolean; canRemove: boolean; canLoad?: boolean }>("/admin/settings/sample-data");
+  const [confirm, setConfirm] = useState<"remove" | "load" | null>(null);
   const toast = useToast();
   const remove = useMutation(() => api<{ users: number; vendors: number; orders: number }>("/admin/settings/remove-sample-data", { method: "POST" }));
-  if (!data || (data.people === 0 && data.stores === 0)) return null;
+  const load = useMutation(() => api<{ people: number; stores: number }>("/admin/settings/load-sample-data", { method: "POST" }));
+  if (!data) return null;
+  const present = data.people > 0 || data.stores > 0;
+  // Nothing to offer someone who can't load or remove it, when there's none.
+  if (!present && !data.canLoad) return null;
 
   return (
     <Card className="mt-6">
-      <CardHeader title="Sample data" description={`${data.people} sample people and ${data.stores} sample stores (on example.com addresses) are still in the database, with their orders, wishlists and requests.`} />
+      <CardHeader
+        title="Sample data"
+        description={
+          present
+            ? `${data.people} sample people and ${data.stores} sample stores (on example addresses) are in the database, with their orders, wishlists and requests.`
+            : "There's no sample data in this deployment. Load it to try every screen with realistic people, stores, orders and wishlists."
+        }
+      />
       <div className="flex flex-wrap items-center justify-between gap-3 p-5">
         <p className="max-w-2xl text-sm text-ink-700">
-          Removing it leaves only real accounts. Anything done while signed in as a sample persona goes too, as do real orders from sample stores. New sample data is no longer loaded.
+          {present
+            ? "Removing it leaves only real accounts. Anything done while signed in as a sample persona goes too, as do real orders from sample stores."
+            : "It's added next to your real accounts, using this deployment's settings and categories, and can be removed again here at any time. Only offered where Database__SeedDemoData is on (dev and demo deployments)."}
         </p>
-        {data.canRemove ? (
-          <Button variant="secondary" icon={Trash2} onClick={() => setConfirm(true)}>Remove sample data</Button>
-        ) : (
-          <p className="text-xs text-ink-500">Only super admins can remove it.</p>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {!data.loaded && data.canLoad && <Button icon={DatabaseZap} onClick={() => setConfirm("load")}>Load sample data</Button>}
+          {present && data.canRemove && <Button variant="secondary" icon={Trash2} onClick={() => setConfirm("remove")}>Remove sample data</Button>}
+          {!data.canRemove && <p className="text-xs text-ink-500">Only super admins can {present ? "remove" : "load"} it.</p>}
+        </div>
       </div>
       <ConfirmDialog
-        open={confirm}
-        onClose={() => setConfirm(false)}
+        open={confirm === "remove"}
+        onClose={() => setConfirm(null)}
         title="Remove all sample data?"
         description="This permanently deletes the sample people, stores, products, orders, wishlists, requests, tickets and their history. Real accounts and categories stay. This can't be undone."
         confirmLabel="Remove sample data"
@@ -182,7 +195,24 @@ export function SampleDataSettings() {
           const r = await remove.run();
           if (r) {
             toast({ tone: "success", title: "Sample data removed", body: `${r.users} people, ${r.vendors} stores and ${r.orders} orders deleted.` });
-            setConfirm(false);
+            setConfirm(null);
+            reload();
+          }
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === "load"}
+        onClose={() => setConfirm(null)}
+        title="Load sample data?"
+        description="Adds sample people, stores, products, orders, wishlists, surprise requests and support tickets to this deployment, including sample team accounts. Real accounts aren't touched. Sample accounts use example addresses, so nobody can sign in to them except through the demo persona picker when demo mode is on."
+        confirmLabel="Load sample data"
+        pending={load.pending}
+        error={load.error?.message}
+        onConfirm={async () => {
+          const r = await load.run();
+          if (r) {
+            toast({ tone: "success", title: "Sample data loaded", body: `${r.people} sample people and ${r.stores} sample stores added.` });
+            setConfirm(null);
             reload();
           }
         }}
