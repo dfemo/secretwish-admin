@@ -22,6 +22,8 @@ export type Meta = {
   commissionRate: number;
   deliveryFees: Record<string, number>;
   demoEnabled?: boolean;
+  /** Where "Back to SecretWish home" goes on this deployment (Admin → Settings → Website address, else the server's Site:WebsiteUrl). */
+  websiteUrl?: string;
   /** Currencies people can choose, with units per US dollar (sample rates set by SecretWish operations). */
   currencies?: { code: string; name: string; perUsd: number }[];
 };
@@ -272,7 +274,7 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
 
   if (state.status === "loading") return <Spinner label="Opening SecretWish" />;
   if (state.status === "error") return <Centered><ErrorState error={{ message: state.message }} onRetry={() => window.location.assign("/")} /></Centered>;
-  if (!value) return <SignInChooser app={app} intro={intro} demoEnabled={!!meta?.demoEnabled} onPick={pickDemo} />;
+  if (!value) return <SignInChooser app={app} intro={intro} demoEnabled={!!meta?.demoEnabled} onPick={pickDemo} websiteUrl={meta?.websiteUrl} />;
   return (
     <Ctx.Provider value={value}>
       <AccessGate onProfileChange={loadProfile}>{children}</AccessGate>
@@ -410,11 +412,11 @@ function OpenYourStore({ vendor, onSubmitted }: { vendor: VendorSummary | null; 
   );
 }
 
-function SignInChooser({ app, intro, demoEnabled, onPick }: { app: AppName; intro: ReactNode; demoEnabled: boolean; onPick: (p: Persona) => void }) {
+function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: AppName; intro: ReactNode; demoEnabled: boolean; onPick: (p: Persona) => void; websiteUrl?: string }) {
   return (
     <main className="min-h-screen bg-plum-950 px-4 py-10 text-ivory-50">
       <nav aria-label="Other SecretWish apps" className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[13px]">
-        <a href={WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-300 hover:text-ivory-50">
+        <a href={websiteUrl && websiteUrl !== "/" ? websiteUrl : WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-300 hover:text-ivory-50">
           <ArrowLeft className="size-4" aria-hidden /> Back to SecretWish home
         </a>
         {app !== "admin" && (
