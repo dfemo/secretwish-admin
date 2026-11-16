@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Ban, CheckCircle2, Heart, Lock, LockOpen, ShieldCheck, Undo2, Users } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Heart, Lock, LockOpen, PieChart, ShieldCheck, Undo2, Users } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { date, dateTime } from "@/shared/lib/format";
@@ -15,9 +15,11 @@ import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 type Claim = {
   status: "Open" | "Claimed" | "SenderCompleted" | "RecipientConfirmed" | "Confirmed"; stage: string; sender: string | null;
   claimedAt: string | null; senderCompletedAt: string | null; recipientConfirmedAt: string | null; confirmedAt: string | null; confirmedBy: string | null;
-  canConfirm: boolean; canRelease: boolean;
+  canConfirm: boolean; canRelease: boolean; canMarkPartial: boolean;
 };
-type Item = { id: string; kind: string; name: string; quantity: number; fulfilled: boolean; notes: string; priceUsd: number | null; giftCount: number; label: string | null; claim: Claim };
+/** Cash wishes: what was asked for, what's been paid so far and the difference still to come. */
+type CashProgress = { requestedUsd: number | null; raisedUsd: number; remainingUsd: number | null; partial: boolean; partiallyFulfilledAt: string | null; partiallyFulfilledBy: string | null };
+type Item = { id: string; kind: string; name: string; quantity: number; fulfilled: boolean; notes: string; priceUsd: number | null; giftCount: number; label: string | null; claim: Claim; cash: CashProgress | null };
 type Gift = { id: string; kind: "Order" | "Cash"; reference: string; amountUsd: number; at: string; status: string; sender: string; item: string | null };
 type Gifter = { sender: string; gifts: number; amountUsd: number; last: string };
 type Request = { id: string; reference: string; title: string; status: string; createdAt: string; budgetMin: number; budgetMax: number; quotes: number; accepted: boolean; sender: string };
@@ -44,13 +46,14 @@ type Detail = {
   canManage: boolean;
 };
 
-type Action = "close" | "reopen" | "blacklist" | "unblacklist" | "confirm" | "release";
+type Action = "close" | "reopen" | "blacklist" | "unblacklist" | "confirm" | "release" | "partial";
 const dialog: Record<Action, { title: (item?: string) => string; description: string; confirm: string; done: string; reason?: string; danger?: boolean }> = {
   close: { title: () => "Close this wishlist?", description: "No more senders will be able to gift from it, and open sourcing requests for it are closed. The owner is notified and this is recorded in the audit log.", confirm: "Close wishlist", done: "Wishlist closed", reason: "Why are you closing it?", danger: true },
   reopen: { title: () => "Reopen this wishlist?", description: "Senders will be able to gift from it again. The owner is notified.", confirm: "Reopen wishlist", done: "Wishlist reopened" },
   blacklist: { title: () => "Blacklist this wishlist?", description: "Nobody will be able to gift from it, including payments already started, and it drops out of discovery. The owner is notified.", confirm: "Blacklist wishlist", done: "Wishlist blacklisted", reason: "Why are you blacklisting it?", danger: true },
   unblacklist: { title: () => "Lift the blacklist?", description: "Senders will be able to gift from this list again. The owner is notified.", confirm: "Lift blacklist", done: "Blacklist lifted" },
   confirm: { title: (item) => `Confirm “${item}” was fulfilled?`, description: "The sender marked it completed and the owner confirmed receiving it. Confirming marks the wish fulfilled for good.", confirm: "Confirm fulfilled", done: "Wish confirmed" },
+  partial: { title: (item) => `Mark “${item}” partly fulfilled?`, description: "What's been paid stays counted towards the wish. Whoever holds it now lets go, and other senders can send the rest. The sender and the owner are told.", confirm: "Mark partly fulfilled", done: "Marked partly fulfilled" },
   release: { title: (item) => `Release “${item}”?`, description: "The sender holding this wish loses it and anyone can gift it again. Use this when a claim is stuck or was abandoned.", confirm: "Release wish", done: "Wish released", reason: "Why are you releasing it?", danger: true },
 };
 
@@ -79,7 +82,20 @@ export default function WishlistDetailPage() {
 
   const itemCols: Column<Item>[] = [
     { key: "n", header: "Wish", render: (i) => (<div><p className="font-semibold">{i.name}</p><p className="text-xs text-ink-500">{i.kind}{i.quantity > 1 ? ` · ×${i.quantity}` : ""}{i.notes ? ` · ${i.notes}` : ""}</p></div>) },
-    { key: "p", header: "Price", align: "right", render: (i) => (i.priceUsd != null ? fmt(i.priceUsd) : "—") },
+    {
+      key: "p",
+      header: "Price",
+      align: "right",
+      render: (i) =>
+        i.cash ? (
+          // Cash wishes: asked for, paid so far, and the difference.
+          <div className="space-y-0.5 text-right">
+            <p className="font-semibold">{i.cash.requestedUsd != null ? fmt(i.cash.requestedUsd) : "Any amount"}</p>
+            <p className="text-xs text-success-700">{fmt(i.cash.raisedUsd)} paid</p>
+            {i.cash.remainingUsd != null && i.cash.remainingUsd > 0 && <p className="text-xs font-semibold text-warning-700">{fmt(i.cash.remainingUsd)} to go</p>}
+          </div>
+        ) : i.priceUsd != null ? fmt(i.priceUsd) : "—",
+    },
     { key: "g", header: "Gifted", render: (i) => (i.label ? <Badge tone={i.giftCount > 1 ? "plum" : "success"}>{i.label}</Badge> : i.fulfilled ? <Badge tone="success">Gifted</Badge> : <span className="text-xs text-ink-400">Not yet</span>) },
     {
       key: "f",
@@ -90,9 +106,16 @@ export default function WishlistDetailPage() {
             {i.claim.status === "SenderCompleted" ? "Awaiting owner" : i.claim.stage}
           </Badge>
           {i.claim.sender && <p className="text-xs text-ink-500">by {i.claim.sender}</p>}
-          {d.canManage && (i.claim.canConfirm || i.claim.canRelease) && (
+          {i.cash?.partial && (
+            <p className="text-xs text-ink-500">
+              Partly fulfilled: {fmt(i.cash.raisedUsd)} of {fmt(i.cash.requestedUsd ?? 0)}, difference {fmt(i.cash.remainingUsd ?? 0)}
+              {i.cash.partiallyFulfilledBy && <> · marked by {i.cash.partiallyFulfilledBy}{i.cash.partiallyFulfilledAt && ` ${date(i.cash.partiallyFulfilledAt)}`}</>}
+            </p>
+          )}
+          {d.canManage && (i.claim.canConfirm || i.claim.canRelease || i.claim.canMarkPartial) && (
             <div className="flex flex-wrap gap-1.5 pt-1">
               {i.claim.canConfirm && <Button size="sm" icon={CheckCircle2} onClick={() => setActing({ key: "confirm", item: i })}>Confirm</Button>}
+              {i.claim.canMarkPartial && <Button size="sm" variant="secondary" icon={PieChart} onClick={() => setActing({ key: "partial", item: i })}>Partly fulfilled</Button>}
               {i.claim.canRelease && <Button size="sm" variant="ghost" icon={Undo2} onClick={() => setActing({ key: "release", item: i })}>Release</Button>}
             </div>
           )}
