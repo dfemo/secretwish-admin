@@ -8,6 +8,7 @@ import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { EmailDeliverySettings } from "./email-settings";
 import { AllDataSettings, CurrencySettings, SampleDataSettings } from "./data-settings";
 import { WebsiteLinkSettings, type WebsiteLink } from "./website-settings";
+import { ContactDetailsSettings, type ContactDetails } from "./contact-settings";
 
 type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number;
   /** Where vendors deliver gifts going through SecretWish. */
@@ -16,7 +17,7 @@ type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutH
    * and how long a sender can hold a wish without paying for it. */
   freeWishlistsPerMonth: number; paidWishlistsPerMonth: number; nonSenderWishlistsPerYear: number; wishClaimHoldHours: number;
 };
-type Data = { settings: Settings; canEdit: boolean; website?: WebsiteLink };
+type Data = { settings: Settings; canEdit: boolean; website?: WebsiteLink; contact?: ContactDetails };
 
 export default function SettingsPage() {
   const { data, error, loading, reload } = useApi<Data>("/admin/settings");
@@ -111,6 +112,7 @@ export default function SettingsPage() {
         </Card>
       </div>
       {data!.website && <WebsiteLinkSettings website={data!.website} canEdit={editable} onSaved={reload} />}
+      {data!.contact && <ContactDetailsSettings contact={data!.contact} canEdit={editable} onSaved={reload} />}
       <CurrencySettings />
       <EmailDeliverySettings />
       <SampleDataSettings />
