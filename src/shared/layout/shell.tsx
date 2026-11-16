@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bell, ChevronDown, KeyRound, LogOut, Menu, type LucideIcon, PanelLeftClose, PanelLeftOpen, Search, Sparkles } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
-import { APP_NAMES, APP_URLS, AUTH_URL, isSampleEmail, useSession, type AppName } from "../lib/session";
+import { APP_NAMES, AUTH_URL, appUrl, isSampleEmail, useSession, type AppName } from "../lib/session";
 import { currencySymbol, timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
@@ -80,7 +80,7 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
                     if (!n.read) markOne.run(n.id);
                     setOpen(false);
                     // A notification about another role (e.g. a payout for staff) opens in that role's app.
-                    if (n.app && n.app !== here) window.location.assign(`${APP_URLS[n.app]}${n.link}`);
+                    if (n.app && n.app !== here) window.location.assign(`${appUrl(n.app, here)}${n.link}`);
                     else router.push(n.link);
                   }}
                   className={cx("flex w-full gap-3 px-4 py-3 text-left hover:bg-plum-50/60", !n.read && "bg-gold-100/30")}

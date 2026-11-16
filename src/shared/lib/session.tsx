@@ -95,18 +95,38 @@ const CALLBACK_PATH = "/auth/callback";
 // Production builds fall back to the live public website; local development uses the Website app on port 3000.
 export const WEBSITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? (process.env.NODE_ENV === "production" ? "https://secretwish-web.vercel.app" : "http://localhost:3000");
 const prod = process.env.NODE_ENV === "production";
-/** Where each app lives. Production builds fall back to the live Vercel deployments when the variable isn't set. */
-export const APP_URLS: Record<AppName, string> = {
-  admin: process.env.NEXT_PUBLIC_ADMIN_URL ?? (prod ? "https://secretwish-admin.vercel.app" : "http://localhost:3001"),
-  sender: process.env.NEXT_PUBLIC_SENDER_URL ?? (prod ? "https://secretwish-sender.vercel.app" : "http://localhost:3002"),
-  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL ?? (prod ? "https://secretwish-recipient.vercel.app" : "http://localhost:3003"),
-  vendor: process.env.NEXT_PUBLIC_VENDOR_URL ?? (prod ? "https://secretwish-vendor.vercel.app" : "http://localhost:3004"),
+/** Each app's address when set for this deployment (NEXT_PUBLIC_*_URL). */
+const CONFIGURED_APP_URLS: Record<AppName, string | undefined> = {
+  admin: process.env.NEXT_PUBLIC_ADMIN_URL,
+  sender: process.env.NEXT_PUBLIC_SENDER_URL,
+  recipient: process.env.NEXT_PUBLIC_RECIPIENT_URL,
+  vendor: process.env.NEXT_PUBLIC_VENDOR_URL,
 };
+const DEFAULT_APP_URLS: Record<AppName, string> = prod
+  ? { admin: "https://secretwish-admin.vercel.app", sender: "https://secretwish-sender.vercel.app", recipient: "https://secretwish-recipient.vercel.app", vendor: "https://secretwish-vendor.vercel.app" }
+  : { admin: "http://localhost:3001", sender: "http://localhost:3002", recipient: "http://localhost:3003", vendor: "http://localhost:3004" };
+
+/**
+ * Where another SecretWish app lives, seen from app <paramref name="from"/>. The deployment's NEXT_PUBLIC_*_URL wins; otherwise
+ * it's worked out from this app's own address (sender-dev.veilwish.com → vendor-dev.veilwish.com, secretwish-sender.vercel.app →
+ * secretwish-vendor.vercel.app), so a dev deployment links to the other dev apps, and signs in through the dev API, rather
+ * than to production. Only the live production addresses are used as a last resort.
+ */
+export function appUrl(target: AppName, from: AppName): string {
+  const configured = CONFIGURED_APP_URLS[target];
+  if (configured) return configured.replace(/\/$/, "");
+  if (typeof window !== "undefined" && target !== from) {
+    const { protocol, hostname, port } = window.location;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1" && hostname.includes(from))
+      return `${protocol}//${hostname.replace(from, target)}${port ? `:${port}` : ""}`;
+  }
+  return DEFAULT_APP_URLS[target];
+}
 export const APP_NAMES: Record<AppName, string> = { admin: "Admin", sender: "Sender", recipient: "Wishlists", vendor: "Vendor portal" };
-const appLinks: { app: AppName; label: string; href: string }[] = [
-  { app: "sender", label: "Send a gift", href: APP_URLS.sender },
-  { app: "recipient", label: "My wishlists", href: APP_URLS.recipient },
-  { app: "vendor", label: "Vendor portal", href: APP_URLS.vendor },
+const appLinks: { app: AppName; label: string }[] = [
+  { app: "sender", label: "Send a gift" },
+  { app: "recipient", label: "My wishlists" },
+  { app: "vendor", label: "Vendor portal" },
 ];
 
 let manager: UserManager | null = null;
@@ -487,7 +507,7 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-plum-300">Switch to</span>
             {appLinks.filter((l) => l.app !== app).map((l) => (
-              <a key={l.app} href={l.href} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-semibold text-ivory-50 hover:border-gold-400 hover:text-gold-400">
+              <a key={l.app} href={appUrl(l.app, app)} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-semibold text-ivory-50 hover:border-gold-400 hover:text-gold-400">
                 {l.label}
               </a>
             ))}
