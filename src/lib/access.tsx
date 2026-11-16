@@ -33,6 +33,7 @@ export const areaPermission: Record<string, Permission> = {
   "/refunds": "refunds.view",
   "/payouts": "payouts.view",
   "/support": "support.view",
+  "/enquiries": "support.view",
   "/reports": "reports.view",
   "/privacy": "privacy.view",
   "/audit": "audit.view",

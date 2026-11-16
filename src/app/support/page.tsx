@@ -9,9 +9,8 @@ import { api, useApi, useMutation, type Paged } from "@/shared/lib/api";
 import { useAccess } from "@/lib/access";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, humanize, timeAgo } from "@/shared/lib/format";
-import { Badge, Button, Card, cx, EmptyState, ErrorState, KpiCard, PageHeader, Select, Spinner, StatusBadge, Switch, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
+import { Badge, Button, Card, cx, EmptyState, ErrorState, KpiCard, Notice, PageHeader, Select, Spinner, StatusBadge, Switch, Tabs, Textarea, SearchInput } from "@/shared/ui/primitives";
 import { Modal, useToast } from "@/shared/ui/overlay";
-import { WebsiteEnquiries } from "./enquiries";
 
 type Ticket = {
   id: string; reference: string; category: string; priority: string; status: string; subject: string; description: string; assignedTo?: string; createdAt: string; resolvedAt?: string;
@@ -20,7 +19,6 @@ type Ticket = {
 };
 type Data = { summary: { open: number; urgent: number; lateDeliveries: number; missingGifts: number; refundRequests: number; privacy: number; disputes: number; avgResolutionHours: number }; tickets: Paged<Ticket> };
 
-const agents = ["Amaka Eze", "Tolu Bakare"];
 const priorityTone: Record<string, "danger" | "warning" | "plum" | "neutral"> = { Urgent: "danger", High: "warning", Normal: "plum", Low: "neutral" };
 
 function SupportInner() {
@@ -43,7 +41,7 @@ function SupportInner() {
   const s = data?.summary;
   return (
     <>
-      <PageHeader title="Customer Support" description="Tickets show masked customer details by default. Internal notes are never visible to customers or vendors." />
+      <PageHeader title="Support tickets" description="Tickets raised in the apps. Customer details are masked by default, and internal notes are never visible to customers or vendors. Website contact-form messages are under Website enquiries." />
       {s && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
           <KpiCard tint="plum" label="Open" value={s.open} />
@@ -95,7 +93,6 @@ function SupportInner() {
         </ul>
         <PagedFooter data={data?.tickets} onPage={setPage} />
       </Card>
-      <WebsiteEnquiries />
       {openId && <TicketModal id={openId} onClose={() => setOpenId(null)} />}
     </>
   );
@@ -112,6 +109,10 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
   const note = useMutation(() => api<Ticket>(`/admin/tickets/${id}/notes`, { method: "POST", body: { body, internal } }));
   const assign = useMutation((a: string) => api<Ticket>(`/admin/tickets/${id}/assign`, { method: "POST", body: { assignee: a || null } }));
   const setStatus = useMutation((s: string) => api<Ticket>(`/admin/tickets/${id}/status`, { method: "POST", body: { status: s } }));
+  // Everyone on the admin team, plus whoever the ticket is assigned to now (in case they've left the team).
+  const { data: team } = useApi<string[]>("/admin/tickets/assignees");
+  const agents = [...new Set([...(team ?? []), ...(t?.assignedTo ? [t.assignedTo] : [])])];
+  const failed = assign.error ?? setStatus.error ?? note.error;
 
   return (
     <Modal open onClose={onClose} size="lg" title={t ? t.subject : "Ticket"} description={t ? `${t.reference} · ${humanize(t.category)} · raised by ${t.raisedBy}` : undefined}>
@@ -124,17 +125,18 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
             <Badge tone={priorityTone[t.priority]}>{t.priority}</Badge>
             {t.order && <Link href={`/orders/${t.order.id}`} className="text-sm font-semibold text-plum-700 hover:underline">Order {t.order.reference} ({t.order.deliveryCity}) →</Link>}
           </div>
+          {failed && <Notice tone="danger">{failed.message}</Notice>}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="assignee" className="text-xs font-semibold text-ink-500">Assigned to</label>
-              <Select id="assignee" disabled={!canManage} value={t.assignedTo ?? ""} onChange={async (e) => { const r = await assign.run(e.target.value); if (r) setT(r); }}>
+              <Select id="assignee" disabled={!canManage || assign.pending} value={t.assignedTo ?? ""} onChange={async (e) => { const r = await assign.run(e.target.value); if (r) setT(r); }}>
                 <option value="">Unassigned</option>
                 {agents.map((a) => (<option key={a}>{a}</option>))}
               </Select>
             </div>
             <div>
               <label htmlFor="tstatus" className="text-xs font-semibold text-ink-500">Status</label>
-              <Select id="tstatus" disabled={!canManage} value={t.status} onChange={async (e) => { const r = await setStatus.run(e.target.value); if (r) { setT(r); toast({ tone: "success", title: `Ticket ${e.target.value.toLowerCase()}` }); } }}>
+              <Select id="tstatus" disabled={!canManage || setStatus.pending} value={t.status} onChange={async (e) => { const r = await setStatus.run(e.target.value); if (r) { setT(r); toast({ tone: "success", title: `Ticket ${e.target.value.toLowerCase()}` }); } }}>
                 {["Open", "Pending", "Resolved", "Closed"].map((s) => (<option key={s}>{s}</option>))}
               </Select>
             </div>

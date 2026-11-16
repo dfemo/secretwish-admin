@@ -6,27 +6,31 @@ import { api, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useAccess } from "@/lib/access";
 import { PagedFooter } from "@/shared/ui/data";
 import { dateTime, timeAgo } from "@/shared/lib/format";
-import { Badge, Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Notice, SearchInput, Spinner } from "@/shared/ui/primitives";
+import { Badge, Button, ButtonLink, Card, EmptyState, ErrorState, Notice, SearchInput, Spinner, Tabs } from "@/shared/ui/primitives";
 import { Modal } from "@/shared/ui/overlay";
 
 type Enquiry = { id: string; reference: string; topic: string; message: string; handled: boolean; createdAt: string; name: string; email: string };
 
 /** Messages sent through the public website's contact form. Support staff open one to see who sent it and reply by email. */
 export function WebsiteEnquiries() {
-  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Enquiry>("/admin/enquiries", {}, 10);
+  const [status, setStatus] = useState<"open" | "handled" | "">("open");
+  const { data: paged, items: data, error, loading, reload, setPage, search, setSearch } = usePagedApi<Enquiry>("/admin/enquiries", { status }, 20);
   const done = useMutation((id: string) => api(`/admin/enquiries/${id}/handled`, { method: "POST" }));
   const openOne = useMutation((id: string) => api<Enquiry>(`/admin/enquiries/${id}/open`, { method: "POST" }));
   const [opened, setOpened] = useState<Enquiry | null>(null);
   const open = paged?.counts?.open ?? 0;
+  const handled = paged?.counts?.handled ?? 0;
   const canManage = useAccess().can("support.manage");
   return (
-    <Card className="mt-6">
-      <CardHeader title="Website enquiries" description="From the public contact form. Open one to see the sender's details and reply." action={<Badge tone={open ? "warning" : "success"}>{open} open</Badge>} />
-      <div className="border-b border-ink-100 px-5 pb-3"><SearchInput value={search} onChange={setSearch} label="Search enquiries" placeholder="Reference, topic or message" className="sm:w-80" /></div>
+    <Card>
+      <div className="flex flex-wrap items-center gap-3 border-b border-ink-100 p-4">
+        <Tabs value={status} onChange={setStatus} tabs={[{ value: "open", label: "Open", count: open }, { value: "handled", label: "Handled", count: handled }, { value: "", label: "All" }]} />
+        <SearchInput value={search} onChange={setSearch} label="Search enquiries" placeholder="Reference, topic or message" className="sm:ml-auto sm:w-80" />
+      </div>
       {loading && <Spinner />}
       {error && <div className="p-4"><ErrorState error={error} onRetry={reload} /></div>}
       {openOne.error && <Notice tone="danger" className="m-4">{openOne.error.message}</Notice>}
-      {data?.length === 0 && <EmptyState icon={Globe} title={search ? "No enquiries match" : "No enquiries yet"} />}
+      {data?.length === 0 && <EmptyState icon={Globe} title={search ? "No enquiries match" : status === "open" ? "No open enquiries" : "No enquiries yet"} />}
       <ul className="divide-y divide-ink-100">
         {data?.map((e) => (
           <li key={e.id} className="flex flex-wrap items-start gap-3 px-5 py-3.5">
