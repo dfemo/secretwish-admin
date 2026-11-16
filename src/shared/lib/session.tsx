@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, Cake, Gift, Heart, LogIn, ShieldCheck, Sparkles, Store, UserPlus } from "lucide-react";
-import { UserManager, WebStorageStateStore } from "oidc-client-ts";
+import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 import { API_URL, api, setAccessTokenProvider, setDemoUser, useApi } from "./api";
 import { guessCurrency, money, type Currency } from "./format";
 import { Avatar, Badge, Button, ErrorState, Logo, Spinner } from "../ui/primitives";
@@ -126,6 +126,28 @@ function auth(app: AppName) {
   return manager;
 }
 
+/** A sign-in lasts 2 days from when the person signed in (auth_time in the id token), however active they are; the API
+ * enforces the same limit and refuses to refresh older sign-ins. Without auth_time (tokens from before the limit) the id token's
+ * issue time stands in, so an older API can't send the app round a sign-in loop. */
+const SESSION_MAX_MS = 2 * 24 * 60 * 60 * 1000;
+function signInExpired(user: User) {
+  const at = user.profile.auth_time ?? user.profile.iat;
+  return typeof at !== "number" || Date.now() - at * 1000 >= SESSION_MAX_MS;
+}
+
+/** Forgets this app's tokens and any half-finished sign-in, then reloads, which asks for a fresh sign-in. */
+async function endExpiredSignIn(app: AppName) {
+  const mgr = auth(app);
+  await mgr.removeUser().catch(() => undefined);
+  await mgr.clearStaleState().catch(() => undefined);
+  window.location.assign("/");
+}
+
+/** Whether a failed token refresh means the sign-in is over (expired or revoked), rather than a network blip. */
+function signInRefused(err: unknown) {
+  return (err as { error?: string } | null)?.error === "invalid_grant";
+}
+
 /** Sends the browser to the central SecretWish sign-in (or create-account) page and back to this page afterwards. */
 function startSignIn(app: AppName, screen?: "signup") {
   const returnTo = window.location.pathname === CALLBACK_PATH ? "/" : window.location.pathname + window.location.search;
@@ -180,9 +202,21 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
       setAccessTokenProvider(async () => {
         const user = await mgr.getUser();
         if (!user) return null;
+        if (signInExpired(user)) {
+          await endExpiredSignIn(app);
+          return null;
+        }
         if (!user.expired) return user.access_token;
         // Access tokens last 15 minutes; swap the refresh token for a new one.
-        return (await mgr.signinSilent().catch(() => null))?.access_token ?? null;
+        try {
+          return (await mgr.signinSilent())?.access_token ?? null;
+        } catch (err) {
+          if (signInRefused(err)) await endExpiredSignIn(app);
+          return null;
+        }
+      });
+      mgr.events.addSilentRenewError((err) => {
+        if (signInRefused(err)) void endExpiredSignIn(app);
       });
 
       if (window.location.pathname === CALLBACK_PATH) {
@@ -196,7 +230,13 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
         return;
       }
 
-      const user = await mgr.getUser();
+      let user = await mgr.getUser();
+      // Signed in more than 2 days ago: drop the stored tokens and sign in afresh below.
+      if (user && signInExpired(user)) {
+        await mgr.removeUser();
+        await mgr.clearStaleState().catch(() => undefined);
+        user = null;
+      }
       if (user) {
         try {
           await loadProfile();
@@ -224,6 +264,16 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
       else await startSignIn(app);
     })().catch(() => setState({ status: "error", message: "Can't reach SecretWish sign-in. Please check your connection and try again." }));
   }, [app, demoKey, loadProfile]);
+
+  // A tab left open is signed out when its 2 days are up, not only when it next calls the API.
+  useEffect(() => {
+    if (state.status !== "signed-in") return;
+    const timer = window.setInterval(async () => {
+      const user = await auth(app).getUser();
+      if (!user || signInExpired(user)) await endExpiredSignIn(app);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [app, state.status]);
 
   const pickDemo = useCallback(
     (p: Persona) => {
