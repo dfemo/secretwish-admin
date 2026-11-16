@@ -53,7 +53,7 @@ export default function CustomersPage() {
 
   return (
     <>
-      <PageHeader title="Customers & Recipients" description="Senders buy gifts; recipients keep wishlists. Open someone to see every role they play and what they've done. Contact details follow your role's privacy rules." />
+      <PageHeader title="Customers & Recipients" description="Senders use the Sender app or have sent a gift; recipients use the Wishlists app or keep wishlists. Open someone to see every role they play and what they've done. Contact details follow your role's privacy rules." />
       {data?.[0]?.masked && (
         <Notice className="mb-4" title="Masked for your role">
           Names, emails and phone numbers are partially hidden. Open a specific order and use “Reveal” with a reason if you need full details.
