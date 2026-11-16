@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import {
+import { Cake,
   ArrowLeft, Ban, Banknote, CalendarHeart, CheckCircle2, Gift, Heart, Inbox, LifeBuoy, type LucideIcon, Package, Send, ShieldCheck, Sparkles, Store, UserCog,
 } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
@@ -16,7 +16,7 @@ import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 type Activity = { at: string; kind: string; title: string; detail: string; amountUsd: number | null; link: string };
 type Detail = {
   id: string; name: string; email: string | null; phone: string | null; city: string; address: string | null; plan: string; usedFreeSample: boolean;
-  memberSince: string; masked: boolean; dateOfBirth: string | null; hasDateOfBirth: boolean;
+  memberSince: string; masked: boolean; dateOfBirth: string | null; hasDateOfBirth: boolean; age: number | null;
   blacklist: { at: string; by: string | null; reason: string | null } | null;
   roles: { sender: boolean; recipient: boolean; vendor: { id: string; name: string; status: string } | null; staff: { role: string; isSuperAdmin: boolean } | null };
   sender: {
@@ -65,6 +65,10 @@ export default function CustomerDetailPage() {
             <h1 className="font-display text-3xl font-semibold text-plum-900">{d.name}</h1>
             <p className="mt-1 text-sm break-all text-ink-500">
               {[d.email, d.phone, d.city].filter(Boolean).join(" · ")} · member since {date(d.memberSince)}
+            </p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-ink-700">
+              <Cake className="size-4 text-plum-600" aria-hidden />
+              {d.dateOfBirth ? <>Born {date(d.dateOfBirth)} · {d.age} years old</> : d.age !== null ? <>{d.age} years old <span className="text-ink-400">(full date hidden for your role)</span></> : <span className="text-warning-700">No date of birth yet</span>}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Roles">
               {d.roles.sender && <Badge tone="plum" icon={Send}>Sender</Badge>}
@@ -178,7 +182,7 @@ export default function CustomerDetailPage() {
             <dl className="grid grid-cols-2 gap-4 p-5">
               <Stat label="Plan" value={d.plan} />
               <Stat label="Free first gift" value={d.usedFreeSample ? "Used" : "Available"} />
-              <Stat label="Date of birth" value={d.dateOfBirth ? date(d.dateOfBirth) : d.hasDateOfBirth ? "Hidden for your role" : "Not set"} />
+              <Stat label="Date of birth" value={d.dateOfBirth ? `${date(d.dateOfBirth)} (${d.age})` : d.age !== null ? `Hidden for your role (age ${d.age})` : "Not set"} />
               <Stat label="City" value={d.city || "—"} />
               {d.address && <Stat label="Address" value={d.address} />}
             </dl>

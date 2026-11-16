@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Clock, Copy, Mail, UserRound } from "lucide-react";
+import { ArrowLeft, Cake, Clock, Copy, Mail, UserRound } from "lucide-react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { useAccess } from "@/lib/access";
@@ -18,7 +18,7 @@ type Listing = { id: string; name: string; description?: string; category?: stri
 type Detail = {
   vendor: { id: string; name: string; contactName: string; email: string; city: string; primaryCategory: string; description: string; status: string; businessVerified: boolean; bankVerified: boolean; idVerified: boolean; rating: number; acceptanceRate: number; avgFulfilmentHours: number; onTimeRate: number; plan: string; decisionReason?: string; appliedAt: string; productApproval?: ApprovalMode };
   /** The people who sign in to run this store. */
-  accounts: { id: string; name: string; email: string | null; emailConfirmed: boolean; phone: string | null; createdAt: string }[];
+  accounts: { id: string; name: string; email: string | null; emailConfirmed: boolean; phone: string | null; createdAt: string; dateOfBirth: string | null; hasDateOfBirth: boolean; age: number | null }[];
   kyc: Kyc;
   products: Listing[];
   stats: { orders: number; gmv: number; delivered: number; exceptions: number; refunds: number };
@@ -94,7 +94,7 @@ export default function VendorDetailPage() {
               <ul className="mt-1 space-y-0.5 text-xs text-ink-500" aria-label="Accounts that sign in to this store">
                 {data.accounts.map((a) => (
                   <li key={a.id} className="flex flex-wrap items-center gap-1.5">
-                    <UserRound className="size-3.5" aria-hidden /> Signs in as {a.name}
+                    <UserRound className="size-3.5" aria-hidden /> Signs in as <Link href={`/customers/${a.id}`} className="font-semibold text-plum-700 hover:underline">{a.name}</Link>
                     {a.email && (
                       <>
                         {" · "}
@@ -103,6 +103,11 @@ export default function VendorDetailPage() {
                       </>
                     )}
                     {a.phone && ` · ${a.phone}`}
+                    {" · "}
+                    <span className="inline-flex items-center gap-1">
+                      <Cake className="size-3.5" aria-hidden />
+                      {a.dateOfBirth ? `Born ${date(a.dateOfBirth)} (${a.age})` : a.age !== null ? `${a.age} years old` : <span className="text-warning-700">no date of birth yet</span>}
+                    </span>
                   </li>
                 ))}
               </ul>
