@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Copy, KeyRound, ShieldAlert, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, Globe2, KeyRound, RefreshCw, ShieldAlert, XCircle } from "lucide-react";
 import { api, ApiError, useApi, useMutation } from "@/shared/lib/api";
 import { useAccess } from "@/lib/access";
 import { Badge, Button, Card, CardHeader, cx, Field, Input, Notice, Select, Switch } from "@/shared/ui/primitives";
@@ -48,9 +48,37 @@ export function PaymentEngineSettings() {
           </Notice>
         )}
         {data && !data.allowLive && <p className="text-xs text-ink-500">Live mode (real money) is switched off on this deployment, so every engine uses its test keys.</p>}
+        <OutboundIp />
         {data?.providers.map((p) => <ProviderCard key={p.provider} p={p} data={data} onSaved={reload} />)}
       </div>
     </Card>
+  );
+}
+
+/** The IP address the API's requests to engines come from, for allow-lists such as Flutterwave's (needed for transfers). */
+function OutboundIp() {
+  const toast = useToast();
+  const { data, error, refreshing, reload } = useApi<{ ipv4: string | null; ipv6: string | null; checkedAt: string }>("/payments/admin/outbound-ip");
+  const ips = [data?.ipv4, data?.ipv6].filter((x): x is string => !!x);
+  return (
+    <div className="rounded-2xl border border-ink-100 bg-ink-50/60 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Globe2 className="size-4 text-plum-700" aria-hidden />
+        <p className="font-semibold text-ink-900">Server&apos;s outgoing IP</p>
+        <Button size="sm" variant="ghost" icon={RefreshCw} loading={refreshing} onClick={reload} className="ml-auto">Check again</Button>
+      </div>
+      {error && <p className="mt-2 text-danger-700">{error.message}</p>}
+      {ips.map((ip) => (
+        <div key={ip} className="mt-2 flex flex-wrap items-center gap-2">
+          <code className="min-w-0 break-all rounded-lg bg-white px-2 py-1 text-ink-900 ring-1 ring-ink-100">{ip}</code>
+          <Button size="sm" variant="ghost" icon={Copy} onClick={async () => { await navigator.clipboard.writeText(ip); toast({ tone: "success", title: "IP copied" }); }}>Copy</Button>
+        </div>
+      ))}
+      <p className="mt-2 text-xs text-ink-500">
+        Add this to the engine&apos;s IP allow-list (Flutterwave: Settings → Whitelisted IP addresses). Without a static outbound IP on the host it can change after a
+        redeploy, so check again after each deploy.
+      </p>
+    </div>
   );
 }
 
