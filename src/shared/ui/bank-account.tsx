@@ -7,7 +7,7 @@ import { Button, Field, Input, Notice, Select } from "./primitives";
 import { useToast } from "./overlay";
 
 type Bank = { code: string; name: string };
-type BankOptions = { engine: string | null; banks: Bank[]; stripeConnect: boolean; error?: string };
+type BankOptions = { engine: string | null; banks: Bank[]; stripeConnect: boolean; error?: string; /** The engine is on test keys. */ testMode?: boolean };
 
 const stripeCountries: [string, string][] = [
   ["GB", "United Kingdom"], ["US", "United States"], ["CA", "Canada"], ["IE", "Ireland"], ["DE", "Germany"], ["FR", "France"], ["NL", "Netherlands"],
@@ -96,6 +96,12 @@ export function BankAccountForm({ endpoint, connectFor, onSaved, onCancel, submi
             {(id, d) => <Input id={id} aria-describedby={d} required inputMode="numeric" autoComplete="off" maxLength={10} value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value.replace(/\D/g, "") })} />}
           </Field>
           {resolve.pending && <p className="text-xs text-ink-500">Checking the account with your bank…</p>}
+          {/* Test keys can't look up real accounts: let them type the name instead. */}
+          {options?.testMode && resolve.error && !resolved && (
+            <Field label="Name on the account" error={err("accountName")} hint="Test mode only: the name isn't checked with the bank.">
+              {(id, d) => <Input id={id} aria-describedby={d} required maxLength={120} autoComplete="name" value={form.accountName} onChange={(e) => setForm({ ...form, accountName: e.target.value })} />}
+            </Field>
+          )}
           {resolved && (
             <p className="flex items-center gap-1.5 rounded-xl bg-success-50 px-3 py-2 text-sm text-success-700">
               <CheckCircle2 className="size-4" aria-hidden /> Account name: <b>{resolved}</b>
@@ -114,7 +120,7 @@ export function BankAccountForm({ endpoint, connectFor, onSaved, onCancel, submi
       )}
       {save.error && !save.error.errors && <Notice tone="danger">{save.error.message}</Notice>}
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" loading={save.pending} disabled={checked && !resolved}>{submitLabel}</Button>
+        <Button type="submit" loading={save.pending} disabled={checked && !resolved && !(options?.testMode && resolve.error && form.accountName.trim())}>{submitLabel}</Button>
         {onCancel && <Button variant="ghost" onClick={onCancel}>{cancelLabel}</Button>}
         {connectFor && options?.stripeConnect && (
           <button type="button" className="ml-auto text-xs font-semibold text-plum-700 hover:underline" onClick={() => setAbroad(true)}>Bank outside Nigeria?</button>
