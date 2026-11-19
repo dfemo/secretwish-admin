@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BellRing, Banknote, Send } from "lucide-react";
-import { api, useMutation, usePagedApi } from "@/shared/lib/api";
+import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Select, Spinner } from "@/shared/ui/primitives";
@@ -19,7 +19,25 @@ type CashGift = {
   /** When the recipient was last asked to add bank details, and why a reminder can't be sent now (null when it can). */
   remindedAt: string | null;
   remindBlocked: string | null;
+  /** The engine that sent it, and whether it's waiting for the engine to confirm the bank has it. */
+  transferGateway: string | null;
+  transferPending: boolean;
+  transferSubmittedAt: string | null;
+  /** Why the last transfer attempt failed (it can be tried again). */
+  failureReason: string | null;
 };
+
+/** What sends money out now: e.g. "Paystack (test)" for Nigerian banks, Stripe abroad, or simulated when none is set up. */
+type PayoutEngines = { nigeria: string | null; stripe: string | null; simulated: boolean };
+
+function engineText(e: PayoutEngines | null | undefined) {
+  if (!e) return null;
+  const real = [e.nigeria && `${e.nigeria} for Nigerian banks`, e.stripe && `${e.stripe} outside Nigeria`].filter(Boolean).join(", ");
+  if (real) return `Transfers go through ${real}.`;
+  return e.simulated
+    ? "No payout engine is set up, so transfers are simulated (no real money). A super admin can add Paystack or Flutterwave keys under Settings → Payment engines."
+    : "No payout engine is set up. A super admin can add Paystack or Flutterwave keys under Settings → Payment engines.";
+}
 
 const statusTone: Record<string, "success" | "warning" | "neutral" | "danger" | "plum"> = { Received: "success", PaidOut: "plum", PayoutPending: "warning", PaymentPending: "neutral", Failed: "danger", Paid: "plum" };
 const statusLabel: Record<string, string> = { PayoutPending: "Paid · to transfer", PaidOut: "Transferred · awaiting receipt", Received: "Received by recipient", PaymentPending: "Not paid", Failed: "Failed", Paid: "Paid" };
@@ -31,7 +49,8 @@ export function CashGiftsCard() {
   const { fmt } = useSession();
   const toast = useToast();
   const [transferring, setTransferring] = useState<CashGift | null>(null);
-  const transfer = useMutation((id: string) => api(`/admin/cash-gifts/${id}/process`, { method: "POST" }));
+  const engines = useApi<PayoutEngines>("/admin/payout-engines");
+  const transfer = useMutation((id: string) => api<{ via: string; pending: boolean; amount: string }>(`/admin/cash-gifts/${id}/process`, { method: "POST" }));
   // Errors come back as the result so the toast can show them straight away.
   const remind = useMutation((id: string) =>
     api<{ emailed: boolean }>(`/admin/cash-gifts/${id}/remind`, { method: "POST" }).catch((e: Error) => ({ emailed: false, error: e.message })),
@@ -57,11 +76,13 @@ export function CashGiftsCard() {
       header: "Status",
       render: (g) => (
         <div className="space-y-1">
-          <Badge tone={statusTone[g.status] ?? "neutral"}>{statusLabel[g.status] ?? g.status}</Badge>
+          <Badge tone={g.transferPending ? "plum" : statusTone[g.status] ?? "neutral"}>{g.transferPending ? "Sending to bank" : statusLabel[g.status] ?? g.status}</Badge>
           {g.status === "PayoutPending" && !g.hasBankDetails && (
             <p className="text-[11px] text-warning-700">Waiting for bank details{g.remindedAt && ` · reminded ${timeAgo(g.remindedAt)}`}</p>
           )}
-          {g.processedBy && <p className="text-[11px] text-ink-500">Sent by {g.processedBy}{g.paidOutAt && ` · ${dateTime(g.paidOutAt)}`}</p>}
+          {g.transferPending && <p className="text-[11px] text-plum-700">Sent with {g.transferGateway} · waiting for the bank{g.transferSubmittedAt && ` · ${timeAgo(g.transferSubmittedAt)}`}</p>}
+          {g.status === "PayoutPending" && !g.transferPending && g.failureReason && <p className="max-w-[240px] text-[11px] text-danger-700">{g.failureReason}. You can try again.</p>}
+          {g.processedBy && <p className="text-[11px] text-ink-500">Sent by {g.processedBy}{g.transferGateway && ` with ${g.transferGateway}`}{g.paidOutAt && ` · ${dateTime(g.paidOutAt)}`}</p>}
           {g.receivedAt && <p className="text-[11px] text-success-700">Confirmed {dateTime(g.receivedAt)}</p>}
           {g.thankYouNote && <p className="max-w-[220px] text-[11px] text-ink-700 italic">“{g.thankYouNote}”</p>}
         </div>
@@ -72,9 +93,9 @@ export function CashGiftsCard() {
       key: "act",
       header: "",
       render: (g) =>
-        g.status !== "PayoutPending" ? null : g.hasBankDetails ? (
+        g.status !== "PayoutPending" || g.transferPending ? null : g.hasBankDetails ? (
           <Button size="sm" icon={Send} disabled={!!g.transferBlocked} title={g.transferBlocked ?? undefined} onClick={() => setTransferring(g)}>
-            Transfer
+            {g.failureReason ? "Try again" : "Transfer"}
           </Button>
         ) : (
           <Button
@@ -102,8 +123,8 @@ export function CashGiftsCard() {
     <Card>
       <CardHeader
         title="Cash gifts"
-        description="Senders pay SecretWish; staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. Transfers are simulated."
-        action={data?.counts ? <Badge tone={data.counts.readyToTransfer ? "warning" : "success"} icon={Banknote}>{data.counts.readyToTransfer ?? 0} ready to transfer · {(data.counts.awaitingPayout ?? 0) - (data.counts.readyToTransfer ?? 0)} need bank details</Badge> : undefined}
+        description={`Senders pay SecretWish; staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. ${engineText(engines.data) ?? ""}`}
+        action={data?.counts ? <Badge tone={data.counts.readyToTransfer ? "warning" : "success"} icon={Banknote}>{data.counts.readyToTransfer ?? 0} ready to transfer{data.counts.sending ? ` · ${data.counts.sending} sending` : ""} · {(data.counts.awaitingPayout ?? 0) - (data.counts.readyToTransfer ?? 0) - (data.counts.sending ?? 0)} need bank details</Badge> : undefined}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-ink-100 p-4">
         <SearchInput value={search} onChange={setSearch} label="Search cash gifts" placeholder="Reference" className="min-w-[200px] flex-1" />
@@ -120,13 +141,16 @@ export function CashGiftsCard() {
         open={!!transferring}
         onClose={() => { setTransferring(null); transfer.setError(null); }}
         title={`Transfer ${transferring ? fmt(transferring.amountUsd) : ""} to ${transferring?.recipient}`}
-        description="Sends the money to the recipient's saved bank account (simulated) and asks them to confirm it arrived. This is recorded in the audit log."
+        description={`Sends the money to the recipient's saved bank account and asks them to confirm it arrived. ${engineText(engines.data) ?? ""} This is recorded in the audit log.`}
         confirmLabel="Transfer now"
         pending={transfer.pending}
         error={transfer.error?.message}
         onConfirm={async () => {
-          if (transferring && (await transfer.run(transferring.id)) !== undefined) {
-            toast({ tone: "success", title: `${transferring.reference} transferred`, body: "The recipient has been asked to confirm it arrived." });
+          const r = transferring ? await transfer.run(transferring.id) : undefined;
+          if (transferring && r !== undefined) {
+            toast(r.pending
+              ? { tone: "success", title: `${transferring.reference} sent with ${r.via}`, body: `${r.amount} is on its way. It's marked transferred when ${r.via} confirms the bank has it.` }
+              : { tone: "success", title: `${transferring.reference} transferred with ${r.via}`, body: `${r.amount}. The recipient has been asked to confirm it arrived.` });
             setTransferring(null);
             reload();
           }
