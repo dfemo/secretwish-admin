@@ -9,6 +9,7 @@ import { EmailDeliverySettings } from "./email-settings";
 import { AllDataSettings, CurrencySettings, SampleDataSettings } from "./data-settings";
 import { WebsiteLinkSettings, type WebsiteLink } from "./website-settings";
 import { ContactDetailsSettings, type ContactDetails } from "./contact-settings";
+import { PaymentEngineSettings } from "./payment-engines";
 
 type Settings = { id: string; commissionRate: number; fxRateNgn: number; payoutHoldDays: number; freeSampleLimitUsd: number; taxRate: number; verificationCodeTtlHours: number; verificationMaxAttempts: number; requireDeliveryEvidenceForPayout: boolean; cashGiftFeeRate: number;
   /** Where vendors deliver gifts going through SecretWish. */
@@ -114,6 +115,7 @@ export default function SettingsPage() {
       {data!.website && <WebsiteLinkSettings website={data!.website} canEdit={editable} onSaved={reload} />}
       {data!.contact && <ContactDetailsSettings contact={data!.contact} canEdit={editable} onSaved={reload} />}
       <CurrencySettings />
+      <PaymentEngineSettings />
       <EmailDeliverySettings />
       <SampleDataSettings />
       <AllDataSettings />
