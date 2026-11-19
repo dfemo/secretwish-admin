@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { BellRing, Banknote, Send } from "lucide-react";
+import { BellRing, Banknote, ListTree, Send } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Select, Spinner } from "@/shared/ui/primitives";
 import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
+import { TransferDetails } from "./transfer-details";
 
 type CashGift = {
   id: string; reference: string; amountUsd: number; feeUsd: number; totalUsd: number; status: string; createdAt: string; paidOutAt: string | null;
@@ -56,13 +57,14 @@ export function CashGiftsCard() {
     api<{ emailed: boolean }>(`/admin/cash-gifts/${id}/remind`, { method: "POST" }).catch((e: Error) => ({ emailed: false, error: e.message })),
   );
   const [reminding, setReminding] = useState<string | null>(null);
+  const [details, setDetails] = useState<string | null>(null);
   const cols: Column<CashGift>[] = [
     {
       key: "ref",
       header: "Cash gift",
       render: (g) => (
         <div>
-          <p className="font-semibold">{g.reference}</p>
+          <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => setDetails(g.id)} title="See the transfer step by step">{g.reference}</button>
           <p className="text-xs text-ink-500">{g.sender} → {g.recipient}</p>
           <p className="text-[11px] text-ink-500">{[g.recipientPhone, g.recipientCity].filter(Boolean).join(" · ") || "No phone or city yet"}</p>
         </div>
@@ -93,7 +95,9 @@ export function CashGiftsCard() {
       key: "act",
       header: "",
       render: (g) =>
-        g.status !== "PayoutPending" || g.transferPending ? null : g.hasBankDetails ? (
+        g.status !== "PayoutPending" || g.transferPending ? (
+          g.transferGateway || g.status !== "PaymentPending" ? <Button size="sm" variant="ghost" icon={ListTree} onClick={() => setDetails(g.id)}>Details</Button> : null
+        ) : g.hasBankDetails ? (
           <Button size="sm" icon={Send} disabled={!!g.transferBlocked} title={g.transferBlocked ?? undefined} onClick={() => setTransferring(g)}>
             {g.failureReason ? "Try again" : "Transfer"}
           </Button>
@@ -137,6 +141,7 @@ export function CashGiftsCard() {
       {error && <ErrorState error={error} onRetry={reload} />}
       {items && <DataTable caption="Cash gifts" columns={cols} rows={items} rowKey={(g) => g.id} empty={<EmptyState icon={Banknote} title="No cash gifts match" />} />}
       <PagedFooter data={data} onPage={setPage} />
+      <TransferDetails id={details} onClose={() => setDetails(null)} onChanged={reload} />
       <ConfirmDialog
         open={!!transferring}
         onClose={() => { setTransferring(null); transfer.setError(null); }}
