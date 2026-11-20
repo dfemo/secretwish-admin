@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { BellRing, Banknote, ListTree, Send } from "lucide-react";
+import { BellRing, Banknote, ListTree, RefreshCw, Send } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, SearchInput, Select, Spinner } from "@/shared/ui/primitives";
-import { ConfirmDialog, useToast } from "@/shared/ui/overlay";
+import { ConfirmDialog, Modal, useToast } from "@/shared/ui/overlay";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
 import { TransferDetails } from "./transfer-details";
 
@@ -58,6 +58,9 @@ export function CashGiftsCard() {
   );
   const [reminding, setReminding] = useState<string | null>(null);
   const [details, setDetails] = useState<string | null>(null);
+  type CheckRow = { id: string; reference: string; gateway: string | null; transferId: string | null; status: string | null; succeeded: boolean | null; message: string | null; error: string | null };
+  const checkAll = useMutation(() => api<{ checkedCount: number; paid: number; failed: number; rows: CheckRow[] }>("/admin/cash-gifts/check-sending", { method: "POST" }));
+  const [checked, setChecked] = useState<{ checkedCount: number; paid: number; failed: number; rows: CheckRow[] } | null>(null);
   const cols: Column<CashGift>[] = [
     {
       key: "ref",
@@ -128,7 +131,11 @@ export function CashGiftsCard() {
       <CardHeader
         title="Cash gifts"
         description={`Senders pay VeilWish (SecretWish); staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. ${engineText(engines.data) ?? ""}`}
-        action={data?.counts ? <Badge tone={data.counts.readyToTransfer ? "warning" : "success"} icon={Banknote}>{data.counts.readyToTransfer ?? 0} ready to transfer{data.counts.sending ? ` · ${data.counts.sending} sending` : ""} · {(data.counts.awaitingPayout ?? 0) - (data.counts.readyToTransfer ?? 0) - (data.counts.sending ?? 0)} need bank details</Badge> : undefined}
+        action={data?.counts ? <div className="flex flex-wrap items-center gap-2">{!!data.counts.sending && engines.data && !engines.data.simulated && (
+          <Button size="sm" variant="secondary" icon={RefreshCw} loading={checkAll.pending} onClick={async () => { const r = await checkAll.run(); if (r) { setChecked(r); reload(); } }}>
+            Check {data.counts.sending} sending with the engine
+          </Button>
+        )}<Badge tone={data.counts.readyToTransfer ? "warning" : "success"} icon={Banknote}>{data.counts.readyToTransfer ?? 0} ready to transfer{data.counts.sending ? ` · ${data.counts.sending} sending` : ""} · {(data.counts.awaitingPayout ?? 0) - (data.counts.readyToTransfer ?? 0) - (data.counts.sending ?? 0)} need bank details</Badge></div> : undefined}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-ink-100 p-4">
         <SearchInput value={search} onChange={setSearch} label="Search cash gifts" placeholder="Reference" className="min-w-[200px] flex-1" />
@@ -141,6 +148,28 @@ export function CashGiftsCard() {
       {error && <ErrorState error={error} onRetry={reload} />}
       {items && <DataTable caption="Cash gifts" columns={cols} rows={items} rowKey={(g) => g.id} empty={<EmptyState icon={Banknote} title="No cash gifts match" />} />}
       <PagedFooter data={data} onPage={setPage} />
+      {checkAll.error && <p className="px-5 pb-3 text-sm text-danger-700">{checkAll.error.message}</p>}
+      <Modal open={!!checked} onClose={() => setChecked(null)} size="xl" title="Transfers checked with the engine"
+        description={checked ? `${checked.checkedCount} checked · ${checked.paid} now transferred · ${checked.failed} failed · ${checked.checkedCount - checked.paid - checked.failed} still sending or couldn't be checked` : undefined}>
+        {checked && (
+          <ul className="divide-y divide-ink-100 text-sm">
+            {checked.rows.map((r) => (
+              <li key={r.id} className="py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => { setChecked(null); setDetails(r.id); }}>{r.reference}</button>
+                  <Badge tone={r.error ? "danger" : r.succeeded === true ? "success" : r.succeeded === false ? "danger" : "warning"}>
+                    {r.error ? "Couldn't check" : r.succeeded === true ? "Transferred" : r.succeeded === false ? "Failed" : "Still sending"}
+                  </Badge>
+                  {r.status && <Badge tone="neutral">{r.gateway}: {r.status}</Badge>}
+                  <span className="ml-auto font-mono text-xs text-ink-500">{r.transferId ?? "no transfer id"}</span>
+                </div>
+                {(r.error || r.message) && <p className="mt-1 break-words text-xs text-ink-700">{r.error ?? r.message}</p>}
+              </li>
+            ))}
+            {checked.rows.length === 0 && <li className="py-3 text-ink-500">Nothing is sending right now.</li>}
+          </ul>
+        )}
+      </Modal>
       <TransferDetails id={details} onClose={() => setDetails(null)} onChanged={reload} />
       <ConfirmDialog
         open={!!transferring}

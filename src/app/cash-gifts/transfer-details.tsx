@@ -5,7 +5,7 @@ import { useState } from "react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
-import { Badge, Button, cx, ErrorState, Notice, Spinner } from "@/shared/ui/primitives";
+import { Badge, Button, cx, ErrorState, Field, Notice, Spinner, Textarea } from "@/shared/ui/primitives";
 import { Modal, useToast } from "@/shared/ui/overlay";
 
 type Step = { at: string; kind: string; source: string; status: string | null; detail: string | null; gateway: string | null };
@@ -28,6 +28,7 @@ const look: Record<string, { label: string; icon: LucideIcon; tone: string }> = 
   Succeeded: { label: "Money reached the bank", icon: CheckCircle2, tone: "bg-success-50 text-success-700" },
   Failed: { label: "Transfer failed", icon: AlertTriangle, tone: "bg-danger-50 text-danger-700" },
   Received: { label: "Recipient confirmed it arrived", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
+  Confirmed: { label: "Marked transferred by staff", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
 };
 
 /** A cash gift's transfer, step by step: amounts, where it went, the engine's ids, and every event up to the bank's confirmation. */
@@ -37,6 +38,9 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
   const { data, error, loading, reload } = useApi<Transfer>(id ? `/admin/cash-gifts/${id}/transfer` : null);
   const check = useMutation((gid: string) => api<{ status: string; succeeded: boolean | null; message: string | null }>(`/admin/cash-gifts/${gid}/check-transfer`, { method: "POST" }));
   const t = data && data.id === id ? data : undefined;
+  const [marking, setMarking] = useState(false);
+  const [note, setNote] = useState("");
+  const mark = useMutation((gid: string, text: string) => api(`/admin/cash-gifts/${gid}/mark-transferred`, { method: "POST", body: { note: text } }));
   const [answer, setAnswer] = useState<{ id: string; status: string; succeeded: boolean | null; message: string | null } | null>(null);
 
   return (
@@ -54,6 +58,34 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
           }
         }}>Check status with {t.gateway}</Button>
       ) : undefined}>
+      {t?.canCheck && (
+        <div className="mb-4 rounded-2xl border border-ink-100 p-4">
+          {!marking ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-ink-700">
+              <span>{t.gateway}&apos;s dashboard shows it paid, but it&apos;s still sending here?</span>
+              <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setMarking(true)}>Mark as transferred</Button>
+            </div>
+          ) : (
+            <form className="grid gap-3" onSubmit={async (e) => {
+              e.preventDefault();
+              if ((await mark.run(t.id, note)) !== undefined) {
+                toast({ tone: "success", title: `${t.reference} marked transferred`, body: "The recipient was asked to confirm it arrived." });
+                setMarking(false); setNote(""); reload(); onChanged();
+              }
+            }}>
+              <Field label="How do you know it arrived?" hint={`E.g. "${t.gateway} dashboard shows transfer ${t.transferId ?? "…"} successful". Kept on the timeline and in the audit log.`}
+                error={mark.error?.errors?.note?.[0]}>
+                {(fid, d) => <Textarea id={fid} aria-describedby={d} required minLength={5} maxLength={300} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />}
+              </Field>
+              {mark.error && !mark.error.errors && <Notice tone="danger">{mark.error.message}</Notice>}
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" icon={BadgeCheck} loading={mark.pending}>Mark as transferred</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setMarking(false); mark.setError(null); }}>Cancel</Button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
       {loading && !t && <Spinner />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {check.error && <Notice tone="danger" title="Couldn't ask the engine">{check.error.message}</Notice>}
