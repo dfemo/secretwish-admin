@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, useMutation } from "../lib/api";
 import { Button, Field, Input, Notice, Select, Textarea } from "./primitives";
 import { Modal, useToast } from "./overlay";
+import { BRAND } from "@/lib/brand";
 
 export type OrderAction = { key: string; label: string };
 
@@ -14,14 +15,14 @@ const specs: Record<string, Spec> = {
   "confirm-payment": { fields: [], help: "Simulates a successful payment webhook from the provider sandbox. No real money moves." },
   "send-to-vendor": { fields: [] },
   accept: { fields: [], help: "You'll have the order ready for dispatch within your stated fulfilment time." },
-  reject: { fields: ["note"], noteLabel: "Why can't you fulfil this order?", tone: "danger", consequential: true, help: "The sender will be refunded or offered an alternative by SecretWish operations." },
+  reject: { fields: ["note"], noteLabel: "Why can't you fulfil this order?", tone: "danger", consequential: true, help: `The sender will be refunded or offered an alternative by ${BRAND} operations.` },
   dispatch: { fields: ["tracking"], help: "The recipient gets a discreet 'on its way' notice and a single-use secret code." },
   redispatch: { fields: ["tracking"] },
   "report-issue": { fields: ["note"], noteLabel: "What went wrong?", tone: "danger" },
-  "hub-receive": { fields: ["note"], noteOptional: true, noteLabel: "Condition on arrival (optional)", help: "The gift has arrived at the SecretWish hub. The vendor is told their part is done." },
-  "hub-ready": { fields: ["note"], noteOptional: true, noteLabel: "Note (optional)", help: "Packed with any other gifts for this person and going out with SecretWish. The recipient gets their secret code now." },
+  "hub-receive": { fields: ["note"], noteOptional: true, noteLabel: "Condition on arrival (optional)", help: `The gift has arrived at the ${BRAND} hub. The vendor is told their part is done.` },
+  "hub-ready": { fields: ["note"], noteOptional: true, noteLabel: "Note (optional)", help: `Packed with any other gifts for this person and going out with ${BRAND}. The recipient gets their secret code now.` },
   "confirm-delivery": { fields: ["evidence"], help: "Delivery must be backed by evidence (e.g. courier proof-of-delivery). It does not by itself make the order payable." },
-  "confirm-received": { fields: [], help: "Confirm the recipient has the gift. They aren't on SecretWish, so they can't confirm it themselves. This marks the order delivered and tells the vendor." },
+  "confirm-received": { fields: [], help: `Confirm the recipient has the gift. They aren't on ${BRAND}, so they can't confirm it themselves. This marks the order delivered and tells the vendor.` },
   "confirm-satisfied": { fields: [], help: "Tell us the gift arrived as expected. The vendor can then be paid straight away instead of after the usual hold period. After this you'd need to contact support to report a problem." },
   "request-refund": { fields: ["note"], noteLabel: "Reason for the refund", tone: "danger", consequential: true },
   cancel: { fields: ["note"], noteLabel: "Reason for cancelling", tone: "danger", consequential: true, help: "If payment was already taken, a refund case is opened instead." },

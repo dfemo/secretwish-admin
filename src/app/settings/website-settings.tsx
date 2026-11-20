@@ -32,7 +32,7 @@ export function WebsiteLinkSettings({ website, canEdit, onSaved }: { website: We
     <Card className="mt-6">
       <CardHeader
         title="Website address"
-        description="Where “Back to SecretWish home” goes from the sign-in pages and each app's sign-in screen. Set it per deployment, e.g. your dev website on dev. Takes effect straight away."
+        description="Where “Back to VeilWish (SecretWish) home” goes from the sign-in pages and each app's sign-in screen. Set it per deployment, e.g. your dev website on dev. Takes effect straight away."
         action={website.overridden ? <Badge tone="plum">Custom</Badge> : <Badge tone="neutral">Default</Badge>}
       />
       <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-end">

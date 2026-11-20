@@ -22,7 +22,7 @@ const gold = "#b07d1e";
 const copy: Record<Kind, { label: string; description: string }> = {
   senders: { label: "Senders", description: "Ranked by gifts sent: paid orders and cash gifts, not cancelled or refunded." },
   recipients: { label: "Recipients", description: "Ranked by gifts received; wishes asked for break ties." },
-  vendors: { label: "Vendors", description: "Approved stores ranked by orders fulfilled (delivered, or handed to the SecretWish hub)." },
+  vendors: { label: "Vendors", description: "Approved stores ranked by orders fulfilled (delivered, or handed to the VeilWish (SecretWish) hub)." },
 };
 
 /** Staff leaderboards for senders, recipients and vendors (with names, masked by access level), and weekly activity trends. */
@@ -117,7 +117,7 @@ export default function LeaderboardsPage() {
           </ChartCard>
           <ChartCard
             title="Orders fulfilled per week"
-            description="Delivered, or handed to the SecretWish hub"
+            description="Delivered, or handed to the VeilWish (SecretWish) hub"
             summary={`${sum("fulfilled")} orders fulfilled over ${weeks} weeks.`}
             table={tableOf([["Fulfilled", "fulfilled"]])}
           >

@@ -89,7 +89,7 @@ export default function SettingsPage() {
           </fieldset>
         </Card>
         <Card>
-          <CardHeader title="SecretWish hub" description="Where vendors deliver gifts that SecretWish delivers itself. Vendors see this on those orders instead of the recipient's address." />
+          <CardHeader title="VeilWish (SecretWish) hub" description="Where vendors deliver gifts that VeilWish (SecretWish) delivers itself. Vendors see this on those orders instead of the recipient's address." />
           <fieldset disabled={!editable} className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Hub name">{(id) => <Input id={id} value={form.hubName ?? ""} onChange={(e) => setForm({ ...form, hubName: e.target.value })} />}</Field>
             <Field label="Phone for vendors">{(id) => <Input id={id} type="tel" value={form.hubPhone ?? ""} onChange={(e) => setForm({ ...form, hubPhone: e.target.value })} />}</Field>

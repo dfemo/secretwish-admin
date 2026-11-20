@@ -7,6 +7,7 @@ import { API_URL, api, setAccessTokenProvider, setDemoUser, useApi } from "./api
 import { guessCurrency, money, type Currency } from "./format";
 import { Avatar, Badge, Button, ErrorState, Logo, Spinner } from "../ui/primitives";
 import { VendorVerification } from "../ui/vendor-kyc";
+import { BRAND } from "@/lib/brand";
 
 export type AppName = "admin" | "sender" | "recipient" | "vendor";
 /** Who is signed in, as this app sees them. `role` is the capacity they act in here (their staff role in Admin). */
@@ -22,7 +23,7 @@ export type Meta = {
   commissionRate: number;
   deliveryFees: Record<string, number>;
   demoEnabled?: boolean;
-  /** Where "Back to SecretWish home" goes on this deployment (Admin → Settings → Website address, else the server's Site:WebsiteUrl). */
+  /** Where "Back to {BRAND} home" goes on this deployment (Admin → Settings → Website address, else the server's Site:WebsiteUrl). */
   websiteUrl?: string;
   /** Currencies people can choose, with units per US dollar (sample rates set by SecretWish operations). */
   currencies?: { code: string; name: string; perUsd: number }[];
@@ -282,7 +283,7 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
       // SecretWish app you'll come straight back. Demo deployments offer a persona picker first.
       if (m?.demoEnabled) setState({ status: "signed-out" });
       else await startSignIn(app);
-    })().catch(() => setState({ status: "error", message: "Can't reach SecretWish sign-in. Please check your connection and try again." }));
+    })().catch(() => setState({ status: "error", message: `Can't reach ${BRAND} sign-in. Please check your connection and try again.` }));
   }, [app, demoKey, loadProfile]);
 
   // A tab left open is signed out when its 2 days are up, not only when it next calls the API.
@@ -342,7 +343,7 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
     [app, persona, state, signOut, currency, setCurrency, meta],
   );
 
-  if (state.status === "loading") return <Spinner label="Opening SecretWish" />;
+  if (state.status === "loading") return <Spinner label={`Opening ${BRAND}`} />;
   if (state.status === "error") return <Centered><ErrorState error={{ message: state.message }} onRetry={() => window.location.assign("/")} /></Centered>;
   if (!value) return <SignInChooser app={app} intro={intro} demoEnabled={!!meta?.demoEnabled} onPick={pickDemo} websiteUrl={meta?.websiteUrl} />;
   return (
@@ -373,7 +374,7 @@ function AccessGate({ children, onProfileChange }: { children: ReactNode; onProf
       <Centered>
         <Logo suffix="Operations" />
         <h1 className="mt-6 font-display text-2xl font-semibold text-plum-900">No team access</h1>
-        <p className="mt-2 text-sm text-ink-500">You&apos;re signed in as {persona.email || persona.name}, but this account isn&apos;t part of the SecretWish team. Team access can only be given by a SecretWish super admin.</p>
+        <p className="mt-2 text-sm text-ink-500">You&apos;re signed in as {persona.email || persona.name}, but this account isn&apos;t part of the {BRAND} team. Team access can only be given by a {BRAND} super admin.</p>
         <Button className="mt-5" variant="secondary" onClick={signOut}>Sign out</Button>
       </Centered>
     );
@@ -398,7 +399,7 @@ function DateOfBirthPrompt({ app, onSaved }: { app: AppName; onSaved: () => Prom
   async function save(e: FormEvent) {
     e.preventDefault();
     if (!value) return setError("Enter your date of birth.");
-    if (value > latest) return setError("You must be 18 or older to use SecretWish.");
+    if (value > latest) return setError(`You must be 18 or older to use ${BRAND}.`);
     setBusy(true);
     setError(null);
     try {
@@ -462,12 +463,12 @@ function OpenYourStore({ vendor, onSubmitted }: { vendor: VendorSummary | null; 
         {vendor?.status === "Suspended" && (
           <>
             <h1 className="mt-6 font-display text-2xl font-semibold text-plum-900">Your store is suspended</h1>
-            <p className="mt-2 text-sm text-ink-500">{vendor.decisionReason ?? "Please contact SecretWish support to find out more."}</p>
+            <p className="mt-2 text-sm text-ink-500">{vendor.decisionReason ?? `Please contact ${BRAND} support to find out more.`}</p>
           </>
         )}
         {canApply && (
           <form onSubmit={submit}>
-            <h1 className="mt-6 font-display text-2xl font-semibold text-plum-900">Open your store on SecretWish</h1>
+            <h1 className="mt-6 font-display text-2xl font-semibold text-plum-900">Open your store on {BRAND}</h1>
             <p className="mt-2 text-sm text-ink-500">Sell gifts to people across Nigeria. Your account stays the same — you can still send and receive gifts too.</p>
             {vendor?.status === "Rejected" && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">Your last application wasn&apos;t approved{vendor.decisionReason ? `: ${vendor.decisionReason}` : "."} You can update it and apply again.</p>}
             <label className="mt-4 block text-sm font-semibold">Store name<input className={field} required maxLength={80} value={form.storeName} onChange={(e) => setForm({ ...form, storeName: e.target.value })} /></label>
@@ -499,7 +500,7 @@ const everyApp: { label: string; icon: typeof Gift }[] = [
 function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: AppName; intro: ReactNode; demoEnabled: boolean; onPick: (p: Persona) => void; websiteUrl?: string }) {
   return (
     <main className="min-h-screen bg-[#2a1d31] px-4 py-6 text-ivory-50 sm:px-6 md:py-10">
-      <nav aria-label="Other SecretWish apps" className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-3 text-[13px] md:mb-4">
+      <nav aria-label={`Other ${BRAND} apps`} className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-3 text-[13px] md:mb-4">
         <a href={websiteUrl && websiteUrl !== "/" ? websiteUrl : WEBSITE_URL} className="inline-flex items-center gap-1.5 font-semibold text-plum-200 hover:text-ivory-50">
           <ArrowLeft className="size-4" aria-hidden /> Back to SecretWish home
         </a>
@@ -526,8 +527,8 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
           <section aria-labelledby="welcome" className="relative z-10 flex flex-col px-6 py-10 sm:px-12 md:py-14">
             <Logo suffix={app === "admin" ? "Operations" : app === "vendor" ? "Vendor" : undefined} />
             <div className="my-auto max-w-sm pt-10 md:pt-14">
-              <h2 id="welcome" className="font-display text-3xl font-semibold sm:text-4xl">Welcome to SecretWish</h2>
-              <p className="mt-2 text-[15px] text-plum-200">Sign in with your SecretWish account{app === "admin" ? "." : ", or create one in a minute."}</p>
+              <h2 id="welcome" className="font-display text-3xl font-semibold sm:text-4xl">Welcome to {BRAND}</h2>
+              <p className="mt-2 text-[15px] text-plum-200">Sign in with your {BRAND} account{app === "admin" ? "." : ", or create one in a minute."}</p>
               <div className="mt-8 grid gap-3">
                 <button type="button" onClick={() => startSignIn(app)}
                   className="inline-flex h-13 min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold-400 to-gold-500 px-5 text-[15px] font-bold text-plum-950 shadow-[0_12px_30px_rgba(201,164,92,0.25)] transition hover:brightness-105 active:translate-y-px">
@@ -535,7 +536,7 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
                 </button>
                 {app === "admin" ? (
                   // Team accounts are created by a super admin; nobody can sign up as staff.
-                  <p className="text-xs leading-relaxed text-plum-300">Team accounts are created by a SecretWish super admin. Sign in with the email they added for you.</p>
+                  <p className="text-xs leading-relaxed text-plum-300">Team accounts are created by a {BRAND} super admin. Sign in with the email they added for you.</p>
                 ) : (
                   <button type="button" onClick={() => startSignIn(app, "signup")}
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-5 text-[15px] font-semibold text-ivory-50 transition hover:border-white/30 hover:bg-white/10">
@@ -548,7 +549,7 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
           </section>
 
           {/* The app's own story, in a lighter panel that rises above the card. */}
-          <section aria-label="About SecretWish" className="relative z-10 p-3 md:-mt-14 md:p-0 md:py-0 md:pr-0">
+          <section aria-label={`About ${BRAND}`} className="relative z-10 p-3 md:-mt-14 md:p-0 md:py-0 md:pr-0">
             <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-plum-500 via-plum-600 to-plum-800 px-7 pt-10 pb-6 sm:px-10 md:pt-16 md:pb-8">
               {/* Notched corner, as on a gift tag. */}
               <span aria-hidden className="absolute -top-px -right-px hidden h-14 w-24 rounded-bl-[28px] bg-[#2a1d31] md:block" />
@@ -560,8 +561,8 @@ function SignInChooser({ app, intro, demoEnabled, onPick, websiteUrl }: { app: A
                   <span aria-hidden className="absolute -top-6 -right-6 grid size-14 place-items-center rounded-full bg-ivory-50 text-plum-800 ring-8 ring-plum-700">
                     <Sparkles className="size-6" />
                   </span>
-                  <p className="font-display text-xl leading-snug font-semibold text-plum-900">One SecretWish account works across every app.</p>
-                  <p className="mt-1.5 text-sm text-ink-500">Send surprises, keep wishlists, run a store or help run SecretWish, all with the same sign-in.</p>
+                  <p className="font-display text-xl leading-snug font-semibold text-plum-900">One {BRAND} account works across every app.</p>
+                  <p className="mt-1.5 text-sm text-ink-500">Send surprises, keep wishlists, run a store or help run {BRAND}, all with the same sign-in.</p>
                   <ul className="mt-4 flex flex-wrap gap-2" aria-label="Apps">
                     {everyApp.map(({ label, icon: Icon }) => (
                       <li key={label} className="inline-flex items-center gap-1.5 rounded-full bg-plum-50 px-3 py-1 text-xs font-semibold text-plum-700">

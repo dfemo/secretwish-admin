@@ -13,7 +13,7 @@ import { useAccess } from "@/lib/access";
 type Filter = "all" | "overdue" | "unchecked" | "mine" | "unassigned" | "exception";
 type Delivery = {
   id: string; reference: string; status: string; deliveryDate: string | null; deliveryOption: string; deliveryCity: string; courier: string | null; trackingReference: string | null;
-  dispatchedAt: string | null; vendor: { id: string; name: string }; destination: "SecretWish hub" | "Recipient";
+  dispatchedAt: string | null; vendor: { id: string; name: string }; destination: "VeilWish (SecretWish) hub" | "Recipient";
   monitoredBy: string | null; lastCheckAt: string | null; lastCheckNote: string | null; overdue: boolean; needsCheck: boolean;
 };
 
@@ -36,7 +36,7 @@ export default function DeliveriesPage() {
       render: (d) => (
         <div>
           <Link href={`/orders/${d.id}`} className="font-semibold text-plum-700 hover:underline">{d.reference}</Link>
-          <p className="text-xs text-ink-500">{d.vendor.name} → {d.destination === "SecretWish hub" ? "SecretWish hub" : d.deliveryCity}</p>
+          <p className="text-xs text-ink-500">{d.vendor.name} → {d.destination === "VeilWish (SecretWish) hub" ? "VeilWish (SecretWish) hub" : d.deliveryCity}</p>
         </div>
       ),
     },
@@ -82,7 +82,7 @@ export default function DeliveriesPage() {
     <>
       <PageHeader
         title="Courier monitoring"
-        description="Gifts with a vendor's courier, on the way to the recipient or to the SecretWish hub. Watch each one, check in with the courier at least daily, and report problems early."
+        description="Gifts with a vendor's courier, on the way to the recipient or to the VeilWish (SecretWish) hub. Watch each one, check in with the courier at least daily, and report problems early."
       />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Tabs

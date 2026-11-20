@@ -48,7 +48,7 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
             setAnswer({ id: t.id, ...r });
             toast(r.succeeded === true ? { tone: "success", title: `${t.gateway} says it's paid`, body: "Marked transferred; the recipient was asked to confirm." }
               : r.succeeded === false ? { tone: "error", title: `${t.gateway} says it failed`, body: r.message ?? r.status }
-              : { tone: "info", title: `Still on its way (${r.status})`, body: "SecretWish checks again every few minutes." });
+              : { tone: "info", title: `Still on its way (${r.status})`, body: "VeilWish (SecretWish) checks again every few minutes." });
             reload();
             onChanged();
           }
@@ -73,14 +73,14 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
             <Row label="Account name" value={t.bank ? <>{t.bank.accountName} {t.bank.verified ? <Badge tone="success">Checked with bank</Badge> : <Badge tone="warning">Not checked</Badge>}</> : "—"} />
             <Row label="Engine" value={t.gateway ?? "Not sent yet"} />
             <Row label="Engine's transfer id" value={<code className="break-all">{t.transferId ?? "—"}</code>} />
-            <Row label="SecretWish reference" value={<code className="break-all">{t.ourReference ?? "—"}</code>} />
+            <Row label="VeilWish (SecretWish) reference" value={<code className="break-all">{t.ourReference ?? "—"}</code>} />
             <Row label="Sender's payment" value={<code className="break-all">{t.paymentReference ?? "—"}</code>} />
           </dl>
 
           {t.pending && (
             <Notice tone="info" icon={ArrowRightLeft} title="Waiting for the bank">
               Sent {t.transferSubmittedAt ? timeAgo(t.transferSubmittedAt) : ""} with {t.gateway}. It&apos;s marked transferred when {t.gateway}&apos;s webhook arrives, or when
-              SecretWish checks with {t.gateway} (every few minutes, or now with the button below).
+              VeilWish (SecretWish) checks with {t.gateway} (every few minutes, or now with the button below).
             </Notice>
           )}
           {t.failureReason && t.status === "PayoutPending" && !t.pending && <Notice tone="danger">{t.failureReason}. It can be sent again from the list.</Notice>}

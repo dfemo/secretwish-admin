@@ -6,6 +6,7 @@ import { api, useApi, useMutation } from "../lib/api";
 import { dateTime, timeAgo } from "../lib/format";
 import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, Notice, Select, Spinner, StatusBadge, Switch, Textarea } from "./primitives";
 import { useToast } from "./overlay";
+import { BRAND } from "@/lib/brand";
 
 type Prefs = { discreet: boolean; email: boolean; sms: boolean; push: boolean; orderUpdates: boolean; wishlistActivity: boolean; marketing: boolean };
 
@@ -23,7 +24,7 @@ export function NotificationPreferences({ showWishlist = true }: { showWishlist?
   const set = (k: keyof Prefs) => (v: boolean) => setForm({ ...form, [k]: v });
   return (
     <Card>
-      <CardHeader title="Notifications" description="Choose how SecretWish contacts you." />
+      <CardHeader title="Notifications" description={`Choose how ${BRAND} contacts you.`} />
       <div className="divide-y divide-ink-100 px-5 pb-5">
         <Switch checked={form.discreet} onChange={set("discreet")} label="Discreet notifications" description="Hide gift names, prices and people from subject lines, push and email previews." />
         <Switch checked={form.email} onChange={set("email")} label="Email" />

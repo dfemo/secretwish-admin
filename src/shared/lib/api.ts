@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Thin client for the SecretWish .NET API. All business rules (status transitions, payout
@@ -45,7 +46,7 @@ export async function api<T = unknown>(path: string, init?: { method?: string; b
       cache: "no-store",
     });
   } catch {
-    throw new ApiError("Can't reach the SecretWish API. Is the backend running on " + API_URL + "?", 0);
+    throw new ApiError(`Can't reach the ${BRAND} API. Is the backend running on ` + API_URL + "?", 0);
   }
   if (res.status === 204) return undefined as T;
   const text = await res.text();

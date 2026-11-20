@@ -101,7 +101,7 @@ export default function CustomerDetailPage() {
         <KpiCard tint="plum" label="Gifts sent" value={s.giftsSent.toLocaleString()} hint={`${s.delivered} delivered · ${s.active} in progress`} />
         <KpiCard tint="gold" label="Spend" value={fmt(s.spendUsd)} hint={s.refunded ? `${s.refunded} refunded` : "Paid, not refunded"} />
         <KpiCard tint="sage" label="Cash gifts sent" value={s.cashGifts.toLocaleString()} hint={fmt(s.cashUsd)} />
-        <KpiCard tint="lavender" label="Wishes fulfilled" value={s.wishesFulfilled.toLocaleString()} hint={s.wishesInProgress ? `${s.wishesInProgress} in progress` : "Confirmed by SecretWish"} />
+        <KpiCard tint="lavender" label="Wishes fulfilled" value={s.wishesFulfilled.toLocaleString()} hint={s.wishesInProgress ? `${s.wishesInProgress} in progress` : "Confirmed by VeilWish (SecretWish)"} />
         <KpiCard tint="plum" label="Surprise requests" value={s.surpriseRequests.toLocaleString()} hint={`${s.openRequests} waiting for quotes`} />
         <KpiCard tint="gold" label="People gifted" value={s.peopleGifted.toLocaleString()} hint={s.lastSentAt ? `Last on ${date(s.lastSentAt)}` : undefined} />
       </Section>

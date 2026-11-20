@@ -160,7 +160,7 @@ function TicketModal({ id, onClose }: { id: string; onClose: () => void }) {
             <label htmlFor="reply" className="sr-only">Message</label>
             <Textarea id="reply" value={body} onChange={(e) => setBody(e.target.value)} placeholder={internal ? "Internal note for the team…" : "Reply to the customer…"} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="w-64"><Switch checked={internal} onChange={setInternal} label="Internal note" description={internal ? "Only SecretWish staff will see this." : "The customer will be notified."} /></div>
+              <div className="w-64"><Switch checked={internal} onChange={setInternal} label="Internal note" description={internal ? "Only VeilWish (SecretWish) staff will see this." : "The customer will be notified."} /></div>
               <Button icon={Send} disabled={body.trim().length < 2} loading={note.pending} onClick={async () => { const r = await note.run(); if (r) { setT(r); setBody(""); toast({ tone: "success", title: internal ? "Internal note added" : "Reply sent (simulated notification)" }); } }}>
                 {internal ? "Add note" : "Send reply"}
               </Button>

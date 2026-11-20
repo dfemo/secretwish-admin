@@ -247,7 +247,7 @@ export default function RequestDetailPage() {
               <Stat label="Name" value={d.recipient.name} />
               <Stat label="City" value={d.recipient.city} />
               <Stat className="col-span-2" label="Email" value={<span className="break-all">{d.recipient.email ?? "—"}</span>} />
-              <Stat label="On SecretWish" value={d.recipient.onSecretWish || d.recipient.viaWishlist ? "Yes" : "No"} />
+              <Stat label="On VeilWish (SecretWish)" value={d.recipient.onSecretWish || d.recipient.viaWishlist ? "Yes" : "No"} />
               <Stat label="Invited to join" value={d.recipient.invitedAt ? dateTime(d.recipient.invitedAt) : "—"} />
               {d.recipient.collected && (
                 <>

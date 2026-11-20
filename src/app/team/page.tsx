@@ -52,7 +52,7 @@ export default function TeamPage() {
       toast({
         tone: "success",
         title: `${form.name.trim()} added as ${r.role}`,
-        body: `${r.created ? "We created their account." : "They already had a SecretWish account, so it now has team access."} ${r.invited ? "An invitation email is on its way." : "Tell them to sign in to the operations app with this email."}`,
+        body: `${r.created ? "We created their account." : "They already had a VeilWish (SecretWish) account, so it now has team access."} ${r.invited ? "An invitation email is on its way." : "Tell them to sign in to the operations app with this email."}`,
       });
       setAdding(false);
       setForm(blank);
@@ -113,14 +113,14 @@ export default function TeamPage() {
           title="Current team"
           description={<>Changes take effect on the person&apos;s next action and are audit-logged. Define what each role can do in <Link href="/roles" className="font-semibold text-plum-700 underline">Roles &amp; Privileges</Link>.</>}
         />
-        <DataTable caption="SecretWish team members" columns={columns} rows={data.members} rowKey={(m) => m.id} />
+        <DataTable caption="VeilWish (SecretWish) team members" columns={columns} rows={data.members} rowKey={(m) => m.id} />
       </Card>
 
       <Modal
         open={adding}
         onClose={() => setAdding(false)}
         title="Add team member"
-        description="If they already have a SecretWish account with this email, it gets team access. Otherwise we create one and they sign in with a one-time code sent to the email."
+        description="If they already have a VeilWish (SecretWish) account with this email, it gets team access. Otherwise we create one and they sign in with a one-time code sent to the email."
         footer={
           <>
             <Button variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>

@@ -26,7 +26,7 @@ export default function PrivacyPage() {
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   return (
     <>
-      <PageHeader title="Privacy & Security" description="How SecretWish protects senders, recipients and the surprise." />
+      <PageHeader title="Privacy & Security" description="How VeilWish (SecretWish) protects senders, recipients and the surprise." />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard tint="plum" label="Active verification codes" value={data.verifications.active} />
         <KpiCard tint="sage" label="Codes verified" value={data.verifications.used} />
@@ -80,8 +80,8 @@ export default function PrivacyPage() {
         <ul className="grid list-disc gap-2 py-5 pr-5 pl-10 text-[13px] text-ink-700 md:grid-cols-2">
           <li>Nigeria Data Protection Act 2023 / NDPC registration, lawful basis for processing recipient data supplied by senders, and data-processing agreements with vendors and couriers.</li>
           <li>Retention periods for orders, verification attempts, audit logs and support tickets; deletion and access-request workflows.</li>
-          <li>Payment-services boundaries: whether a licensed provider&apos;s split/escrow product is required so SecretWish never holds customer funds (CBN guidance).</li>
-          <li>Consumer protection (FCCPA) obligations for a managed marketplace: refunds, returns, delivery promises and liability between SecretWish and vendors.</li>
+          <li>Payment-services boundaries: whether a licensed provider&apos;s split/escrow product is required so VeilWish (SecretWish) never holds customer funds (CBN guidance).</li>
+          <li>Consumer protection (FCCPA) obligations for a managed marketplace: refunds, returns, delivery promises and liability between VeilWish (SecretWish) and vendors.</li>
           <li>Vendor terms, KYB requirements and tax treatment of commission, VAT and subscriptions.</li>
           <li>If expanding to the UK: UK GDPR, Consumer Rights Act 2015 and FCA payment-services perimeter.</li>
         </ul>

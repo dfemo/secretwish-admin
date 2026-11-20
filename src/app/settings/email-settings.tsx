@@ -77,7 +77,7 @@ export function EmailDeliverySettings() {
     <Card className="mt-6">
       <CardHeader
         title="Email delivery"
-        description="Which service sends sign-in codes and other SecretWish email. If the chosen service fails, email is retried through Resend."
+        description="Which service sends sign-in codes and other VeilWish (SecretWish) email. If the chosen service fails, email is retried through Resend."
         action={<Badge tone={data.ready.length ? "success" : "warning"} icon={Mail}>{data.ready.length ? `Using ${data.ready.includes(data.provider) ? data.provider : "Resend"}` : "Not set up"}</Badge>}
       />
       <fieldset disabled={!data.canEdit} className="grid gap-4 p-5 sm:grid-cols-2">
@@ -88,12 +88,12 @@ export function EmailDeliverySettings() {
             </Select>
           )}
         </Field>
-        <Field label="Send from" hint="e.g. SecretWish <no-reply@mail.secretwish.com>, on a domain verified with the provider.">
+        <Field label="Send from" hint="e.g. VeilWish (SecretWish) <no-reply@mail.secretwish.com>, on a domain verified with the provider.">
           {(id, d) => <Input id={id} aria-describedby={d} value={from} onChange={(e) => setFrom(e.target.value)} />}
         </Field>
         {testSender && (
           <Notice className="sm:col-span-2" tone="warning" title="Sending from Resend's test address">
-            onboarding@resend.dev only delivers to the email your Resend account uses. SecretWish still tries everyone&apos;s own address first, but Resend
+            onboarding@resend.dev only delivers to the email your Resend account uses. VeilWish (SecretWish) still tries everyone&apos;s own address first, but Resend
             refuses the rest, so they end up in the fallback inbox below. Verify your domain at resend.com/domains and change “Send from” to an address
             on it so emails reach people directly.
           </Notice>

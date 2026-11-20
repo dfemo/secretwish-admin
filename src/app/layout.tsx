@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: { default: "SecretWish Operations", template: "%s · SecretWish Operations" },
-  description: "SecretWish admin & operations dashboard (prototype with synthetic data).",
+  title: { default: "VeilWish (SecretWish) Operations", template: "%s · VeilWish (SecretWish) Operations" },
+  description: "VeilWish (SecretWish) admin & operations dashboard (prototype with synthetic data).",
   robots: { index: false, follow: false },
 };
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BadgeCheck, Clock, FileUp, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
 import { Badge, Button, ErrorState, Field, Input, Notice, Select, Spinner } from "./primitives";
+import { BRAND } from "@/lib/brand";
 
 type Check = {
   kind: "Business" | "Bank" | "Identity"; label: string; asks: string; status: "NotSubmitted" | "Submitted" | "Verified" | "Rejected";
@@ -174,7 +175,7 @@ export function VendorVerification({ storeName }: { storeName: string }) {
           : <>To protect customers and pay you safely, every store is verified before it can sell. Submit these three checks and we&apos;ll review <strong>{storeName}</strong>.</>}
       </p>
       <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-plum-700">
-        <ShieldCheck className="size-4" aria-hidden /> {done} of {checks.length} submitted · your details are encrypted and only seen by the SecretWish verification team
+        <ShieldCheck className="size-4" aria-hidden /> {done} of {checks.length} submitted · your details are encrypted and only seen by the {BRAND} verification team
       </p>
       <ul className="mt-4 space-y-3">
         {checks.map((c) => (

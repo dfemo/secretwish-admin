@@ -77,7 +77,7 @@ export default function WishlistDetailPage() {
     ...d.requests.map((r) => ({ at: r.createdAt, title: `Sourcing request ${r.reference}`, detail: `${r.sender} asked vendors for “${r.title}” · ${r.quotes} quote${r.quotes === 1 ? "" : "s"} · ${r.status}` })),
     ...d.gifts.map((g) => ({ at: g.at, title: `${g.kind === "Cash" ? "Cash gift" : "Gift"} ${g.reference}`, detail: `${g.sender} · ${fmt(g.amountUsd)}${g.item ? ` · ${g.item}` : ""} · ${g.status}` })),
     ...d.unsuccessful.map((g) => ({ at: g.at, title: `${g.kind === "Cash" ? "Cash gift" : "Gift"} ${g.reference} didn't go through`, detail: `${g.sender} · ${fmt(g.amountUsd)} · ${g.status}` })),
-    ...(d.closed ? [{ at: d.closed.at, title: d.closed.byOwner ? "Closed by the owner" : "Closed by SecretWish", detail: `${d.closed.by} · ${closureLabel[d.closed.kind]}` }] : []),
+    ...(d.closed ? [{ at: d.closed.at, title: d.closed.byOwner ? "Closed by the owner" : "Closed by VeilWish (SecretWish)", detail: `${d.closed.by} · ${closureLabel[d.closed.kind]}` }] : []),
   ].sort((a, b) => a.at.localeCompare(b.at));
 
   const itemCols: Column<Item>[] = [
@@ -197,7 +197,7 @@ export default function WishlistDetailPage() {
             {d.closed.note && <span className="block font-display text-base italic">“{d.closed.note}”</span>}
             <span className="mt-1 block text-xs">
               {d.closed.notePublic ? "Their message is shown on the public wishlist." : "They kept their message off the public wishlist."}
-              {d.closed.kind === "Thanks" && " Everyone who gifted was sent it."} Nobody can gift from the list any more; only SecretWish can reopen it.
+              {d.closed.kind === "Thanks" && " Everyone who gifted was sent it."} Nobody can gift from the list any more; only VeilWish (SecretWish) can reopen it.
             </span>
           </Notice>
         ) : (

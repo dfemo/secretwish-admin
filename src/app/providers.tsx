@@ -26,7 +26,7 @@ const sections: NavSection[] = [
   {
     title: "Delivery",
     items: [
-      { href: "/hub", label: "SecretWish Hub", icon: Warehouse },
+      { href: "/hub", label: "VeilWish (SecretWish) Hub", icon: Warehouse },
       { href: "/deliveries", label: "Courier Monitoring", icon: Radar },
     ],
   },
@@ -112,7 +112,7 @@ export default function Providers({ children }: { children: ReactNode }) {
             <h1 className="font-display text-4xl leading-tight font-semibold md:text-5xl">
               The control room for <span className="text-gold-400">discreet gifting</span>.
             </h1>
-            <p className="mt-4 max-w-md text-plum-200">Orders, vendors, refunds, payouts and support — with privacy controls that change with your role. Sign in with your SecretWish account; access follows the team role a super admin gives you.</p>
+            <p className="mt-4 max-w-md text-plum-200">Orders, vendors, refunds, payouts and support — with privacy controls that change with your role. Sign in with your VeilWish (SecretWish) account; access follows the team role a super admin gives you.</p>
           </>
         }
       >

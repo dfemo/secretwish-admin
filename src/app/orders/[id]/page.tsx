@@ -130,7 +130,7 @@ export default function OrderDetailPage() {
                 <dd className="tabular">{fmt(d.money.total)}</dd>
               </div>
               <div className="flex justify-between text-xs">
-                <dt className="text-ink-500">SecretWish commission</dt>
+                <dt className="text-ink-500">VeilWish (SecretWish) commission</dt>
                 <dd className="tabular text-success-700">{fmt(d.money.platformFee)}</dd>
               </div>
               <div className="flex justify-between text-xs">
@@ -148,7 +148,7 @@ export default function OrderDetailPage() {
               {can("orders.manage") && (
               <div className="mt-6 rounded-xl border border-dashed border-ink-200 p-3">
                 <label htmlFor="note" className="text-xs font-semibold text-ink-700">
-                  Add internal note <span className="font-normal text-ink-400">(visible to SecretWish staff only)</span>
+                  Add internal note <span className="font-normal text-ink-400">(visible to VeilWish (SecretWish) staff only)</span>
                 </label>
                 <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} className="mt-1.5 min-h-[64px]" />
                 <div className="mt-2 flex justify-end">
@@ -252,7 +252,7 @@ export default function OrderDetailPage() {
             <CardHeader title="Delivery" />
             <dl className="grid grid-cols-2 gap-4 p-5">
               <Stat label="Option" value={d.delivery.deliveryOption} />
-              <Stat label={d.delivery.deliveredAt ? "Delivered by" : "To be delivered by"} value={d.delivery.viaHub ? <Link href="/hub" className="font-semibold text-plum-700 hover:underline">A SecretWish agent (via the hub)</Link> : "The vendor's courier"} />
+              <Stat label={d.delivery.deliveredAt ? "Delivered by" : "To be delivered by"} value={d.delivery.viaHub ? <Link href="/hub" className="font-semibold text-plum-700 hover:underline">A VeilWish (SecretWish) agent (via the hub)</Link> : "The vendor's courier"} />
               {d.delivery.hubReceivedAt && <Stat label="Received at hub" value={`${dateTime(d.delivery.hubReceivedAt)}${d.delivery.hubReceivedBy ? ` by ${d.delivery.hubReceivedBy}` : ""}`} />}
               {d.delivery.hubReadyAt && <Stat label="Out for delivery" value={dateTime(d.delivery.hubReadyAt)} />}
               {(d.delivery.monitoredBy || d.delivery.lastCheckAt) && (
@@ -264,7 +264,7 @@ export default function OrderDetailPage() {
               <Stat className="col-span-2" label="Delivery evidence" value={d.delivery.deliveryEvidence ?? "—"} />
               {d.delivery.deliveredAt && <Stat className="col-span-2" label="Sender confirmed satisfied" value={d.delivery.senderApprovedAt ? `${dateTime(d.delivery.senderApprovedAt)} · payout hold lifted` : "Not yet · payout waits for the hold period"} />}
               <Stat className="col-span-2" label="Who confirms delivery" value={d.recipient.onSecretWish ? "Recipient, with their secret code (or staff with evidence)" : "Sender marks it received (or staff with evidence)"} />
-              {d.recipient.senderCanConfirm && <p className="col-span-2 text-xs text-ink-500">The recipient isn&apos;t on SecretWish, so the sender can mark this order received. Once either of you confirms, the other option disappears.</p>}
+              {d.recipient.senderCanConfirm && <p className="col-span-2 text-xs text-ink-500">The recipient isn&apos;t on VeilWish (SecretWish), so the sender can mark this order received. Once either of you confirms, the other option disappears.</p>}
               {d.recipient.invitedAt && <Stat className="col-span-2" label="Recipient invited to join" value={dateTime(d.recipient.invitedAt)} />}
               {d.verification && (
                 <Stat

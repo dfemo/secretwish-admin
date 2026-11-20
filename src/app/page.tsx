@@ -46,7 +46,7 @@ export default function OverviewPage() {
       <PageHeader
         eyebrow={today || "Overview"}
         title={greeting}
-        description="Here's how the marketplace is doing. GMV, SecretWish revenue and vendor earnings are reported separately."
+        description="Here's how the marketplace is doing. GMV, VeilWish (SecretWish) revenue and vendor earnings are reported separately."
         actions={
           <>
             {data.sampleData && <SampleDataBadge />}
@@ -65,7 +65,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <KpiCard tint="plum" icon={ShoppingBag} label="Total orders" value={k.totalOrders} delta={k.totalOrdersDelta} href="/orders" />
         <KpiCard tint="gold" icon={CircleDollarSign} label="Gross merchandise value" value={fmt(k.gmv)} delta={k.gmvDelta} hint="Subtotal + delivery, before refunds, excl. VAT" />
-        <KpiCard tint="sage" icon={Banknote} label="Net marketplace revenue" value={fmt(k.netRevenue)} delta={k.netRevenueDelta} hint="SecretWish commission on kept orders" />
+        <KpiCard tint="sage" icon={Banknote} label="Net marketplace revenue" value={fmt(k.netRevenue)} delta={k.netRevenueDelta} hint="VeilWish (SecretWish) commission on kept orders" />
         <KpiCard tint="rose" icon={AlertTriangle} label="Orders requiring attention" value={k.requiringAttention} hint="SLA breaches, exceptions, refunds, holds" href="/orders?status=attention" />
         <KpiCard tint="lavender" icon={PackageOpen} label="Pending fulfilment" value={k.pendingFulfilment} hint="Awaiting vendor or processing" href="/orders?status=Processing" />
         <KpiCard tint="ivory" icon={Store} label="Active vendors" value={k.activeVendors} href="/vendors" />
@@ -76,7 +76,7 @@ export default function OverviewPage() {
       <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">
         <ChartCard
           title="Sales & orders"
-          description={`GMV vs SecretWish revenue, last ${data.days} days`}
+          description={`GMV vs VeilWish (SecretWish) revenue, last ${data.days} days`}
           summary={`GMV ${fmt(k.gmv)} and revenue ${fmt(k.netRevenue)} over ${data.days} days. Peak day ${peak ? shortDate(peak.date) : "—"} at ${fmt(peak?.gmv ?? 0)}.`}
           table={{ headers: ["Date", "Orders", "GMV", "Revenue"], rows: data.trend.map((t) => [shortDate(t.date), t.orders, fmt(t.gmv), fmt(t.revenue)]) }}
           height={280}

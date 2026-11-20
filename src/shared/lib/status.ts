@@ -15,6 +15,7 @@ import {
   Warehouse,
   XCircle,
 } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 export type Tone = "neutral" | "plum" | "gold" | "success" | "warning" | "danger" | "info";
 
@@ -34,7 +35,7 @@ const map: Record<string, Meta> = {
   RefundCompleted: { label: "Refunded", tone: "neutral", icon: RotateCcw },
   DeliveryException: { label: "Delivery exception", tone: "danger", icon: AlertTriangle },
   // Hub orders: SecretWish received the gift from the vendor, then sends it out.
-  AtHub: { label: "At SecretWish hub", tone: "plum", icon: Warehouse },
+  AtHub: { label: `At ${BRAND} hub`, tone: "plum", icon: Warehouse },
   ReadyForDelivery: { label: "Out for delivery", tone: "info", icon: Truck },
   // Payments
   Pending: { label: "Pending", tone: "warning", icon: Clock },

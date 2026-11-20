@@ -22,7 +22,7 @@ type Filter = "all" | "customer" | "vendor" | "staff" | "blacklisted";
 export default function UsersPage() {
   const { isSuperAdmin } = useAccess();
   if (!isSuperAdmin)
-    return <EmptyState icon={Lock} title="Super admins only" description="Only a SecretWish super admin can see every account and make people admins." />;
+    return <EmptyState icon={Lock} title="Super admins only" description="Only a VeilWish (SecretWish) super admin can see every account and make people admins." />;
   return <Users />;
 }
 
@@ -55,7 +55,7 @@ function Users() {
     },
     {
       key: "does",
-      header: "Uses SecretWish as",
+      header: "Uses VeilWish (SecretWish) as",
       render: (u) => (
         <div className="flex flex-wrap gap-1">
           {u.isSender && <Badge tone="plum">Sender</Badge>}
@@ -85,7 +85,7 @@ function Users() {
 
   return (
     <>
-      <PageHeader title="All users" description="Every account on SecretWish: senders, recipients, vendors and the team. Give an existing account a team role to make them an admin with just that role's permissions." />
+      <PageHeader title="All users" description="Every account on VeilWish (SecretWish): senders, recipients, vendors and the team. Give an existing account a team role to make them an admin with just that role's permissions." />
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-ink-100 p-4">
           <Tabs

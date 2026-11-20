@@ -127,7 +127,7 @@ export function CashGiftsCard() {
     <Card>
       <CardHeader
         title="Cash gifts"
-        description={`Senders pay SecretWish; staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. ${engineText(engines.data) ?? ""}`}
+        description={`Senders pay VeilWish (SecretWish); staff transfer the money once the recipient adds bank details, then the recipient confirms it arrived. ${engineText(engines.data) ?? ""}`}
         action={data?.counts ? <Badge tone={data.counts.readyToTransfer ? "warning" : "success"} icon={Banknote}>{data.counts.readyToTransfer ?? 0} ready to transfer{data.counts.sending ? ` · ${data.counts.sending} sending` : ""} · {(data.counts.awaitingPayout ?? 0) - (data.counts.readyToTransfer ?? 0) - (data.counts.sending ?? 0)} need bank details</Badge> : undefined}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-ink-100 p-4">

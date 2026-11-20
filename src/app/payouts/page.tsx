@@ -69,7 +69,7 @@ export default function PayoutsPage() {
 
   return (
     <>
-      <PageHeader title="Vendor Payouts" description="Payouts are calculated from eligible orders and executed by the payment provider — SecretWish never holds funds in this design." />
+      <PageHeader title="Vendor Payouts" description="Payouts are calculated from eligible orders and executed by the payment provider — VeilWish (SecretWish) never holds funds in this design." />
       <Notice className="mb-6" tone="info" title="Eligibility rules (configurable in Settings)">
         Delivered with evidence{data.rules.requireDeliveryEvidenceForPayout ? " (required)" : ""} · {data.rules.payoutHoldDays}-day hold after delivery · no open refund, dispute or chargeback · no fraud hold · vendor not suspended · payment settled. Commission {Math.round(data.rules.commissionRate * 100)}%. Provider calls are simulated.
       </Notice>
@@ -148,7 +148,7 @@ export default function PayoutsPage() {
               <p>{runFor.eligibleOrders} eligible orders will be batched and submitted to the payment provider&apos;s transfer API (simulated). Eligibility is re-checked on the server at submission time.</p>
               <dl className="rounded-xl bg-ivory-100 p-3 text-[13px]">
                 <div className="flex justify-between"><dt>Gross</dt><dd className="tabular">{fmt(runFor.gross)}</dd></div>
-                <div className="flex justify-between"><dt>SecretWish fees</dt><dd className="tabular">−{fmt(runFor.fees)}</dd></div>
+                <div className="flex justify-between"><dt>VeilWish (SecretWish) fees</dt><dd className="tabular">−{fmt(runFor.fees)}</dd></div>
                 <div className="flex justify-between border-t border-ink-200 pt-1 font-semibold"><dt>Net payable</dt><dd className="tabular">{fmt(runFor.net)}</dd></div>
               </dl>
             </div>

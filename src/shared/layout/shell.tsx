@@ -9,6 +9,7 @@ import { APP_NAMES, AUTH_URL, appUrl, isSampleEmail, useSession, type AppName } 
 import { currencySymbol, timeAgo } from "../lib/format";
 import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
+import { BRAND } from "@/lib/brand";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number | string };
 export type NavSection = { title?: string; items: NavItem[] };
@@ -358,7 +359,7 @@ export function ConsumerShell({ items, children, tagline }: { items: NavItem[]; 
       </a>
       <header className="sticky top-0 z-30 px-3 pt-3 md:px-4">
         <div className={cx("mx-auto flex h-16 max-w-6xl items-center gap-3 rounded-[24px] pr-2 pl-4", glass)}>
-          <Link href="/" className="shrink-0 text-plum-900" aria-label="SecretWish home">
+          <Link href="/" className="shrink-0 text-plum-900" aria-label={`${BRAND} home`}>
             <Logo suffix={tagline} />
           </Link>
           {/* Pill tabs, like a segmented control; the current page's icon sits in a dark disc. */}

@@ -27,8 +27,8 @@ type HubData = { groups: Group[]; counts: Record<Stage, number>; hub: { name: st
 const stageCopy: Record<Stage, string> = {
   inbound: "Paid gifts that vendors are preparing or bringing to the hub.",
   "at-hub": "Received from vendors. Mark them ready once everything for that person is in and packed.",
-  ready: "Packed and going out with SecretWish. Confirm delivery with evidence once handed over.",
-  delivered: "Delivered by SecretWish in the last 30 days.",
+  ready: "Packed and going out with VeilWish (SecretWish). Confirm delivery with evidence once handed over.",
+  delivered: "Delivered by VeilWish (SecretWish) in the last 30 days.",
 };
 
 /** The SecretWish hub: gifts vendors deliver to SecretWish, grouped by the person they're for, from arrival to delivery. */
@@ -47,8 +47,8 @@ export default function HubPage() {
   return (
     <>
       <PageHeader
-        title="SecretWish Hub"
-        description="Gifts that vendors deliver to SecretWish, so we can check them, pack a person's gifts together and deliver them ourselves."
+        title="VeilWish (SecretWish) Hub"
+        description="Gifts that vendors deliver to VeilWish (SecretWish), so we can check them, pack a person's gifts together and deliver them ourselves."
       />
       {data && (
         <Card className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
@@ -81,7 +81,7 @@ export default function HubPage() {
       ) : error || !data ? (
         <ErrorState error={error} onRetry={reload} />
       ) : data.groups.length === 0 ? (
-        <EmptyState icon={Warehouse} title="Nothing here" description="Hub orders appear here when senders or recipients choose SecretWish delivery, or a wishlist's gifts come from several vendors." />
+        <EmptyState icon={Warehouse} title="Nothing here" description="Hub orders appear here when senders or recipients choose VeilWish (SecretWish) delivery, or a wishlist's gifts come from several vendors." />
       ) : (
         <ul className="space-y-4">
           {data.groups.map((g) => {
