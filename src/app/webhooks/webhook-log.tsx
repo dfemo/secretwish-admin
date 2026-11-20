@@ -8,11 +8,11 @@ import { dateTime } from "@/shared/lib/format";
 import { useAccess } from "@/lib/access";
 import { Badge, Button, Card, EmptyState, ErrorState, PageHeader, SearchInput, Select, Spinner, Tabs } from "@/shared/ui/primitives";
 import { DataTable, PagedFooter, type Column } from "@/shared/ui/data";
-import { useToast } from "@/shared/ui/overlay";
+import { Modal, useToast } from "@/shared/ui/overlay";
 import type { Engine } from "./engines";
 
 
-type Hook = { id: string; provider: string; at: string; outcome: string; type: string | null; reference: string | null; status: string | null; detail: string | null };
+type Hook = { id: string; provider: string; at: string; outcome: string; type: string | null; reference: string | null; status: string | null; detail: string | null; body: string | null };
 const tone: Record<string, "success" | "warning" | "danger" | "neutral"> = { Applied: "success", Duplicate: "neutral", Ignored: "neutral", NoMatch: "warning", BadSignature: "danger", NoKeys: "danger", Unreadable: "danger" };
 const label: Record<string, string> = { Applied: "Applied", Duplicate: "Repeat (ignored)", Ignored: "Not used", NoMatch: "No matching transfer", BadSignature: "Refused: secret didn't match", NoKeys: "Refused: no keys", Unreadable: "Unreadable" };
 const problems = ["BadSignature", "NoKeys", "Unreadable", "NoMatch"];
@@ -24,6 +24,7 @@ export function WebhookLog({ engine }: { engine?: Engine }) {
   const toast = useToast();
   const [outcome, setOutcome] = useState<string>("");
   const [days, setDays] = useState("30");
+  const [open, setOpen] = useState<Hook | null>(null);
   const { data, items, error, loading, refreshing, reload, setPage, search, setSearch } = usePagedApi<Hook>(
     isSuperAdmin ? "/payments/admin/webhooks" : null, { provider: engine?.toLowerCase(), outcome, days }, 25);
   const providers = useApi<{ providers: { provider: string; webhookUrl: string | null }[] }>(isSuperAdmin && engine ? "/payments/admin/providers" : null);
@@ -82,11 +83,29 @@ export function WebhookLog({ engine }: { engine?: Engine }) {
         {loading && !items && <Spinner />}
         {error && <ErrorState error={error} onRetry={reload} />}
         {items && (
-          <DataTable caption={engine ? `${engine} webhooks` : "Webhooks"} columns={cols} rows={items} rowKey={(h) => h.id}
+          <DataTable caption={engine ? `${engine} webhooks` : "Webhooks"} columns={cols} rows={items} rowKey={(h) => h.id} onRowClick={setOpen}
             empty={<EmptyState icon={Radio} title="No webhooks match" description={search || outcome ? "Try another filter." : "None have arrived in this period."} />} />
         )}
         <PagedFooter data={data} onPage={setPage} />
       </Card>
+      <Modal open={!!open} onClose={() => setOpen(null)} size="xl" title={open ? `${open.provider} webhook` : "Webhook"}
+        description={open ? `${dateTime(open.at)} · ${label[open.outcome] ?? open.outcome}` : undefined}>
+        {open && (
+          <div className="space-y-3 text-sm">
+            {open.detail && <p className="text-ink-700">{open.detail}</p>}
+            <p className="text-xs text-ink-500">What {open.provider} sent, with account numbers cut to the last 4 digits and names, emails and phones hidden.</p>
+            {open.body ? (
+              <div className="relative">
+                <Button size="sm" variant="ghost" icon={Copy} className="absolute top-2 right-2"
+                  onClick={async () => { await navigator.clipboard.writeText(open.body!); toast({ tone: "success", title: "Webhook body copied" }); }}>Copy</Button>
+                <pre className="max-h-[60vh] overflow-auto rounded-2xl bg-ink-50 p-4 text-xs text-ink-900">{open.body}</pre>
+              </div>
+            ) : (
+              <p className="rounded-2xl bg-ink-50 p-4 text-ink-500">No body was kept for this webhook (it arrived before bodies were recorded, or it wasn&apos;t JSON).</p>
+            )}
+          </div>
+        )}
+      </Modal>
     </>
   );
 }
