@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, ArrowRightLeft, BadgeCheck, CheckCircle2, CircleDollarSign, Gift, Radio, RefreshCw, Search, Send, XCircle, type LucideIcon } from "lucide-react";
+import { useState } from "react";
 import { api, useApi, useMutation } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
@@ -36,6 +37,7 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
   const { data, error, loading, reload } = useApi<Transfer>(id ? `/admin/cash-gifts/${id}/transfer` : null);
   const check = useMutation((gid: string) => api<{ status: string; succeeded: boolean | null; message: string | null }>(`/admin/cash-gifts/${gid}/check-transfer`, { method: "POST" }));
   const t = data && data.id === id ? data : undefined;
+  const [answer, setAnswer] = useState<{ id: string; status: string; succeeded: boolean | null; message: string | null } | null>(null);
 
   return (
     <Modal open={!!id} onClose={onClose} size="xl" title={t ? `Transfer for ${t.reference}` : "Transfer"} description={t ? `${t.sender} → ${t.recipient}` : undefined}
@@ -43,6 +45,7 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
         <Button icon={RefreshCw} loading={check.pending} onClick={async () => {
           const r = await check.run(t.id);
           if (r) {
+            setAnswer({ id: t.id, ...r });
             toast(r.succeeded === true ? { tone: "success", title: `${t.gateway} says it's paid`, body: "Marked transferred; the recipient was asked to confirm." }
               : r.succeeded === false ? { tone: "error", title: `${t.gateway} says it failed`, body: r.message ?? r.status }
               : { tone: "info", title: `Still on its way (${r.status})`, body: "SecretWish checks again every few minutes." });
@@ -53,7 +56,14 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
       ) : undefined}>
       {loading && !t && <Spinner />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {check.error && <Notice tone="danger">{check.error.message}</Notice>}
+      {check.error && <Notice tone="danger" title="Couldn't ask the engine">{check.error.message}</Notice>}
+      {t && answer?.id === t.id && (
+        <Notice tone={answer.succeeded === true ? "success" : answer.succeeded === false ? "danger" : "info"} title={`${t.gateway ?? "The engine"} says: ${answer.status}`}>
+          {answer.succeeded === null
+            ? `${answer.message ? `${answer.message}. ` : ""}It isn't finished at ${t.gateway} yet, so it stays as sending. If ${t.gateway}'s dashboard shows it as successful, compare the transfer id below with the one there.`
+            : answer.message ?? (answer.succeeded ? "Marked transferred." : "Marked failed.")}
+        </Notice>
+      )}
       {t && (
         <div className="space-y-5">
           <dl className="grid gap-3 rounded-2xl bg-ink-50 p-4 text-sm sm:grid-cols-2">
