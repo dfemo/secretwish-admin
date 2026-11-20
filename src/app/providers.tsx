@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, Tags, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Inbox, Package, Radar, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, UsersRound, Warehouse } from "lucide-react";
+import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, Tags, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Inbox, Package, Radar, Radio, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, UsersRound, Warehouse } from "lucide-react";
 import { useApi, type Paged } from "@/shared/lib/api";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
@@ -37,6 +37,15 @@ const sections: NavSection[] = [
       { href: "/cash-gifts", label: "Cash Gifts", icon: Banknote },
       { href: "/refunds", label: "Refunds & Disputes", icon: RotateCcw },
       { href: "/payouts", label: "Vendor Payouts", icon: HandCoins },
+      {
+        href: "/webhooks", label: "Webhooks", icon: Radio,
+        children: [
+          { href: "/webhooks", label: "All engines" },
+          { href: "/webhooks/paystack", label: "Paystack" },
+          { href: "/webhooks/flutterwave", label: "Flutterwave" },
+          { href: "/webhooks/stripe", label: "Stripe" },
+        ],
+      },
       { href: "/pricing", label: "Pricing & Plans", icon: Tags },
     ],
   },
@@ -83,7 +92,7 @@ function Shell({ children }: { children: ReactNode }) {
     "/hub": hub.data?.counts?.["at-hub"] || undefined,
   };
   const visible = sections
-    .map((s) => ({ ...s, items: s.items.filter((it) => (it.href === "/users" ? isSuperAdmin : !areaPermission[it.href] || can(areaPermission[it.href]))).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
+    .map((s) => ({ ...s, items: s.items.filter((it) => (it.href === "/users" || it.href === "/webhooks" ? isSuperAdmin : !areaPermission[it.href] || can(areaPermission[it.href]))).map((it) => ({ ...it, badge: badges[it.href] ?? it.badge })) }))
     .filter((s) => s.items.length > 0);
   const needed = permissionFor(pathname);
   const home = visible[0]?.items[0]?.href;

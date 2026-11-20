@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Copy, Globe2, KeyRound, Radio, RefreshCw, ShieldAlert, XCircle } from "lucide-react";
-import { dateTime } from "@/shared/lib/format";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2, Copy, Globe2, KeyRound, Radio, RefreshCw, ShieldAlert, XCircle } from "lucide-react";
 import { api, ApiError, useApi, useMutation } from "@/shared/lib/api";
 import { useAccess } from "@/lib/access";
 import { Badge, Button, Card, CardHeader, cx, Field, Input, Notice, Select, Switch } from "@/shared/ui/primitives";
@@ -50,48 +50,15 @@ export function PaymentEngineSettings() {
         )}
         {data && !data.allowLive && <p className="text-xs text-ink-500">Live mode (real money) is switched off on this deployment, so every engine uses its test keys.</p>}
         <OutboundIp />
-        <RecentWebhooks />
+        <Link href="/webhooks" className="flex items-center gap-2 rounded-2xl border border-ink-100 p-4 text-sm hover:bg-ink-50">
+          <Radio className="size-4 text-plum-700" aria-hidden />
+          <span className="font-semibold text-ink-900">Webhooks</span>
+          <span className="text-ink-500">Every webhook from the engines and what happened to it, under Money → Webhooks.</span>
+          <ArrowRight className="ml-auto size-4 text-ink-400" aria-hidden />
+        </Link>
         {data?.providers.map((p) => <ProviderCard key={p.provider} p={p} data={data} onSaved={reload} />)}
       </div>
     </Card>
-  );
-}
-
-type Hook = { id: string; provider: string; at: string; outcome: string; type: string | null; reference: string | null; status: string | null; detail: string | null };
-const hookTone: Record<string, "success" | "warning" | "danger" | "neutral"> = { Applied: "success", Duplicate: "neutral", Ignored: "neutral", NoMatch: "warning", BadSignature: "danger", NoKeys: "danger", Unreadable: "danger" };
-const hookLabel: Record<string, string> = { Applied: "Applied", Duplicate: "Repeat (ignored)", Ignored: "Not used", NoMatch: "No matching transfer", BadSignature: "Refused: secret didn't match", NoKeys: "Refused: no keys", Unreadable: "Unreadable" };
-
-/** The latest webhooks from the engines and what happened to each, to see whether they arrive and why one was refused. */
-function RecentWebhooks() {
-  const { data, error, refreshing, reload } = useApi<Hook[]>("/payments/admin/webhooks");
-  return (
-    <div className="rounded-2xl border border-ink-100 p-4 text-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <Radio className="size-4 text-plum-700" aria-hidden />
-        <p className="font-semibold text-ink-900">Recent webhooks</p>
-        <Button size="sm" variant="ghost" icon={RefreshCw} loading={refreshing} onClick={reload} className="ml-auto">Refresh</Button>
-      </div>
-      {error && <p className="mt-2 text-danger-700">{error.message}</p>}
-      {data && data.length === 0 && (
-        <p className="mt-2 text-ink-500">No webhooks have arrived in the last 30 days. Check that each engine&apos;s dashboard has the webhook URL below, and its secret hash saved here.</p>
-      )}
-      {data && data.length > 0 && (
-        <ul className="mt-2 divide-y divide-ink-100">
-          {data.slice(0, 15).map((h) => (
-            <li key={h.id} className="py-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={hookTone[h.outcome] ?? "neutral"}>{hookLabel[h.outcome] ?? h.outcome}</Badge>
-                <span className="font-medium text-ink-900">{h.provider}</span>
-                {h.type && <code className="text-xs text-ink-500">{h.type}</code>}
-                {h.status && <Badge tone="neutral">{h.status}</Badge>}
-                <span className="ml-auto text-xs text-ink-500">{dateTime(h.at)}</span>
-              </div>
-              {(h.reference || h.detail) && <p className="mt-1 break-words text-xs text-ink-700">{[h.reference, h.detail].filter(Boolean).join(" · ")}</p>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 

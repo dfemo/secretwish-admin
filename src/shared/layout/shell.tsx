@@ -11,7 +11,8 @@ import { Avatar, Badge, cx, Logo } from "../ui/primitives";
 import { Drawer } from "../ui/overlay";
 import { BRAND } from "@/lib/brand";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number | string };
+/** `children` is a sub-menu, shown under the item while one of its pages is open. */
+export type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number | string; children?: { href: string; label: string; badge?: number | string }[] };
 export type NavSection = { title?: string; items: NavItem[] };
 
 /** app: where link opens; null for older notifications, which open in the current app. */
@@ -252,6 +253,22 @@ export function SidebarShell({ sections, children, suffix, subtitle, searchPlace
                     {!compact && <span className="flex-1 truncate">{it.label}</span>}
                     {!compact && it.badge !== undefined && it.badge !== 0 && <span className="rounded-full bg-plum-800 px-1.5 py-px text-[10px] font-bold text-white">{it.badge}</span>}
                   </Link>
+                  {!compact && active && it.children && (
+                    <ul aria-label={`${it.label} pages`} className="mt-0.5 ml-[21px] space-y-0.5 border-l border-ink-200/70 pl-3">
+                      {it.children.map((c) => {
+                        const here = pathname === c.href;
+                        return (
+                          <li key={c.href}>
+                            <Link href={c.href} aria-current={here ? "page" : undefined}
+                              className={cx("flex items-center gap-2 rounded-xl px-3 py-1.5 text-[13px] transition", here ? "bg-white font-semibold text-ink-900 shadow-sm" : "text-ink-500 hover:bg-white/60 hover:text-ink-900")}>
+                              <span className="flex-1 truncate">{c.label}</span>
+                              {c.badge !== undefined && c.badge !== 0 && <span className="rounded-full bg-plum-800 px-1.5 py-px text-[10px] font-bold text-white">{c.badge}</span>}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </li>
               );
             })}
