@@ -13,10 +13,10 @@ import type { Engine } from "./engines";
 
 
 type Hook = { id: string; provider: string; at: string; outcome: string; type: string | null; reference: string | null; status: string | null; detail: string | null; body: string | null };
-const tone: Record<string, "success" | "warning" | "danger" | "neutral"> = { Applied: "success", Duplicate: "neutral", Ignored: "neutral", NoMatch: "warning", BadSignature: "danger", NoKeys: "danger", Unreadable: "danger" };
-const label: Record<string, string> = { Applied: "Applied", Duplicate: "Repeat (ignored)", Ignored: "Not used", NoMatch: "No matching transfer", BadSignature: "Refused: secret didn't match", NoKeys: "Refused: no keys", Unreadable: "Unreadable" };
-const problems = ["BadSignature", "NoKeys", "Unreadable", "NoMatch"];
-const tabs = ["", "Problems", "Applied", "NoMatch", "BadSignature", "Duplicate", "Ignored", "NoKeys", "Unreadable"] as const;
+const tone: Record<string, "success" | "warning" | "danger" | "neutral"> = { Applied: "success", Duplicate: "neutral", Ignored: "neutral", NoMatch: "warning", StillPending: "warning", BadSignature: "danger", NoKeys: "danger", Unreadable: "danger" };
+const label: Record<string, string> = { Applied: "Applied", Duplicate: "Repeat (ignored)", Ignored: "Not used", NoMatch: "No matching transfer", StillPending: "Payment still pending", BadSignature: "Refused: secret didn't match", NoKeys: "Refused: no keys", Unreadable: "Unreadable" };
+const problems = ["BadSignature", "NoKeys", "Unreadable", "NoMatch", "StillPending"];
+const tabs = ["", "Problems", "Applied", "StillPending", "NoMatch", "BadSignature", "Duplicate", "Ignored", "NoKeys", "Unreadable"] as const;
 
 /** Every webhook the engines sent in the last 30 days and what happened to it: all engines, or one. Super admins only. */
 export function WebhookLog({ engine }: { engine?: Engine }) {
