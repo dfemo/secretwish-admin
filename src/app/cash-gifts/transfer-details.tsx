@@ -14,7 +14,7 @@ type Transfer = {
   gateway: string | null; transferId: string | null; ourReference: string | null; pending: boolean; transferSubmittedAt: string | null;
   paidOutAt: string | null; receivedAt: string | null; failureReason: string | null; processedBy: string | null; sender: string; recipient: string;
   bank: { bankName: string; accountNumberLast4: string; accountName: string; verified: boolean } | null;
-  canCheck: boolean; steps: Step[];
+  canCheck: boolean; canMark: boolean; steps: Step[];
 };
 
 /** How each step looks on the timeline. */
@@ -28,18 +28,22 @@ const look: Record<string, { label: string; icon: LucideIcon; tone: string }> = 
   Succeeded: { label: "Money reached the bank", icon: CheckCircle2, tone: "bg-success-50 text-success-700" },
   Failed: { label: "Transfer failed", icon: AlertTriangle, tone: "bg-danger-50 text-danger-700" },
   Received: { label: "Recipient confirmed it arrived", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
-  Confirmed: { label: "Marked transferred by staff", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
+  Confirmed: { label: "Marked received by staff", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
+  ClosedByRecipient: { label: "Closed by the recipient's confirmation", icon: BadgeCheck, tone: "bg-success-50 text-success-700" },
 };
 
 /** A cash gift's transfer, step by step: amounts, where it went, the engine's ids, and every event up to the bank's confirmation. */
-export function TransferDetails({ id, onClose, onChanged }: { id: string | null; onClose: () => void; onChanged: () => void }) {
+export function TransferDetails({ id, onClose, onChanged, startMarking = false }: { id: string | null; onClose: () => void; onChanged: () => void; startMarking?: boolean }) {
   const { fmt } = useSession();
   const toast = useToast();
   const { data, error, loading, reload } = useApi<Transfer>(id ? `/admin/cash-gifts/${id}/transfer` : null);
   const check = useMutation((gid: string) => api<{ status: string; succeeded: boolean | null; message: string | null }>(`/admin/cash-gifts/${gid}/check-transfer`, { method: "POST" }));
   const t = data && data.id === id ? data : undefined;
-  const [marking, setMarking] = useState(false);
   const [note, setNote] = useState("");
+  const [marking, setMarking] = useState(startMarking);
+  // Opening it from the list's "Mark as received" button goes straight to the form.
+  const [openedFor, setOpenedFor] = useState<string | null>(null);
+  if (id !== openedFor) { setOpenedFor(id); setMarking(startMarking); setNote(""); }
   const mark = useMutation((gid: string, text: string) => api(`/admin/cash-gifts/${gid}/mark-transferred`, { method: "POST", body: { note: text } }));
   const [answer, setAnswer] = useState<{ id: string; status: string; succeeded: boolean | null; message: string | null } | null>(null);
 
@@ -50,7 +54,7 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
           const r = await check.run(t.id);
           if (r) {
             setAnswer({ id: t.id, ...r });
-            toast(r.succeeded === true ? { tone: "success", title: `${t.gateway} says it's paid`, body: "Marked transferred; the recipient was asked to confirm." }
+            toast(r.succeeded === true ? { tone: "success", title: `${t.gateway} says it's paid`, body: "Marked received by recipient; they were asked to confirm." }
               : r.succeeded === false ? { tone: "error", title: `${t.gateway} says it failed`, body: r.message ?? r.status }
               : { tone: "info", title: `Still on its way (${r.status})`, body: "VeilWish (SecretWish) checks again every few minutes." });
             reload();
@@ -58,28 +62,28 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
           }
         }}>Check status with {t.gateway}</Button>
       ) : undefined}>
-      {t?.canCheck && (
+      {t?.canMark && (
         <div className="mb-4 rounded-2xl border border-ink-100 p-4">
           {!marking ? (
             <div className="flex flex-wrap items-center gap-2 text-sm text-ink-700">
-              <span>{t.gateway}&apos;s dashboard shows it paid, but it&apos;s still sending here?</span>
-              <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setMarking(true)}>Mark as transferred</Button>
+              <span>{t.gateway ?? "The engine"}&apos;s dashboard shows it settled, but it&apos;s still sending here?</span>
+              <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setMarking(true)}>Mark as received by recipient</Button>
             </div>
           ) : (
             <form className="grid gap-3" onSubmit={async (e) => {
               e.preventDefault();
               if ((await mark.run(t.id, note)) !== undefined) {
-                toast({ tone: "success", title: `${t.reference} marked transferred`, body: "The recipient was asked to confirm it arrived." });
+                toast({ tone: "success", title: `${t.reference}: received by recipient, awaiting confirmation`, body: "The recipient was asked to confirm it arrived." });
                 setMarking(false); setNote(""); reload(); onChanged();
               }
             }}>
-              <Field label="How do you know it arrived?" hint={`E.g. "${t.gateway} dashboard shows transfer ${t.transferId ?? "…"} successful". Kept on the timeline and in the audit log.`}
+              <Field label="How do you know it settled?" hint={`E.g. "${t.gateway} dashboard shows transfer ${t.transferId ?? "…"} successful". Kept on the timeline and in the audit log.`}
                 error={mark.error?.errors?.note?.[0]}>
                 {(fid, d) => <Textarea id={fid} aria-describedby={d} required minLength={5} maxLength={300} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />}
               </Field>
               {mark.error && !mark.error.errors && <Notice tone="danger">{mark.error.message}</Notice>}
               <div className="flex gap-2">
-                <Button type="submit" size="sm" icon={BadgeCheck} loading={mark.pending}>Mark as transferred</Button>
+                <Button type="submit" size="sm" icon={BadgeCheck} loading={mark.pending}>Mark as received</Button>
                 <Button size="sm" variant="ghost" onClick={() => { setMarking(false); mark.setError(null); }}>Cancel</Button>
               </div>
             </form>
@@ -111,8 +115,8 @@ export function TransferDetails({ id, onClose, onChanged }: { id: string | null;
 
           {t.pending && (
             <Notice tone="info" icon={ArrowRightLeft} title="Waiting for the bank">
-              Sent {t.transferSubmittedAt ? timeAgo(t.transferSubmittedAt) : ""} with {t.gateway}. It&apos;s marked transferred when {t.gateway}&apos;s webhook arrives, or when
-              VeilWish (SecretWish) checks with {t.gateway} (every few minutes, or now with the button below).
+              Sent {t.transferSubmittedAt ? timeAgo(t.transferSubmittedAt) : ""} with {t.gateway}. It&apos;s marked received when {t.gateway}&apos;s webhook arrives, when
+              VeilWish (SecretWish) checks with {t.gateway} (every few minutes, or now with the button below), when the recipient confirms it arrived, or when you mark it received above.
             </Notice>
           )}
           {t.failureReason && t.status === "PayoutPending" && !t.pending && <Notice tone="danger">{t.failureReason}. It can be sent again from the list.</Notice>}

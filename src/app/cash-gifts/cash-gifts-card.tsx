@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BellRing, Banknote, ListTree, RefreshCw, Send } from "lucide-react";
+import { BadgeCheck, BellRing, Banknote, ListTree, RefreshCw, Send } from "lucide-react";
 import { api, useApi, useMutation, usePagedApi } from "@/shared/lib/api";
 import { useSession } from "@/shared/lib/session";
 import { dateTime, timeAgo } from "@/shared/lib/format";
@@ -23,6 +23,8 @@ type CashGift = {
   /** The engine that sent it, and whether it's waiting for the engine to confirm the bank has it. */
   transferGateway: string | null;
   transferPending: boolean;
+  /** Whether the viewer can mark a sending transfer as received by the recipient. */
+  canMark: boolean;
   transferSubmittedAt: string | null;
   /** Why the last transfer attempt failed (it can be tried again). */
   failureReason: string | null;
@@ -41,7 +43,7 @@ function engineText(e: PayoutEngines | null | undefined) {
 }
 
 const statusTone: Record<string, "success" | "warning" | "neutral" | "danger" | "plum"> = { Received: "success", PaidOut: "plum", PayoutPending: "warning", PaymentPending: "neutral", Failed: "danger", Paid: "plum" };
-const statusLabel: Record<string, string> = { PayoutPending: "Paid · to transfer", PaidOut: "Transferred · awaiting receipt", Received: "Received by recipient", PaymentPending: "Not paid", Failed: "Failed", Paid: "Paid" };
+const statusLabel: Record<string, string> = { PayoutPending: "Paid · to transfer", PaidOut: "Received by recipient · awaiting confirmation", Received: "Received by recipient", PaymentPending: "Not paid", Failed: "Failed", Paid: "Paid" };
 
 /** Admin → Money → Cash gifts: money senders gave instead of gifts, the SecretWish fee, the transfer and the recipient's receipt. */
 export function CashGiftsCard() {
@@ -58,6 +60,8 @@ export function CashGiftsCard() {
   );
   const [reminding, setReminding] = useState<string | null>(null);
   const [details, setDetails] = useState<string | null>(null);
+  const [markFirst, setMarkFirst] = useState(false);
+  const open = (id: string, mark = false) => { setMarkFirst(mark); setDetails(id); };
   type CheckRow = { id: string; reference: string; gateway: string | null; transferId: string | null; status: string | null; succeeded: boolean | null; message: string | null; error: string | null };
   const checkAll = useMutation(() => api<{ checkedCount: number; paid: number; failed: number; rows: CheckRow[] }>("/admin/cash-gifts/check-sending", { method: "POST" }));
   const [checked, setChecked] = useState<{ checkedCount: number; paid: number; failed: number; rows: CheckRow[] } | null>(null);
@@ -67,7 +71,7 @@ export function CashGiftsCard() {
       header: "Cash gift",
       render: (g) => (
         <div>
-          <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => setDetails(g.id)} title="See the transfer step by step">{g.reference}</button>
+          <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => open(g.id)} title="See the transfer step by step">{g.reference}</button>
           <p className="text-xs text-ink-500">{g.sender} → {g.recipient}</p>
           <p className="text-[11px] text-ink-500">{[g.recipientPhone, g.recipientCity].filter(Boolean).join(" · ") || "No phone or city yet"}</p>
         </div>
@@ -98,8 +102,15 @@ export function CashGiftsCard() {
       key: "act",
       header: "",
       render: (g) =>
-        g.status !== "PayoutPending" || g.transferPending ? (
-          g.transferGateway || g.status !== "PaymentPending" ? <Button size="sm" variant="ghost" icon={ListTree} onClick={() => setDetails(g.id)}>Details</Button> : null
+        g.transferPending ? (
+          <div className="flex flex-wrap justify-end gap-1">
+            {g.canMark && (
+              <Button size="sm" variant="secondary" icon={BadgeCheck} title="The engine's dashboard shows it settled: mark it received and ask the recipient to confirm" onClick={() => open(g.id, true)}>Mark as received</Button>
+            )}
+            <Button size="sm" variant="ghost" icon={ListTree} onClick={() => open(g.id)}>Details</Button>
+          </div>
+        ) : g.status !== "PayoutPending" ? (
+          g.transferGateway || g.status !== "PaymentPending" ? <Button size="sm" variant="ghost" icon={ListTree} onClick={() => open(g.id)}>Details</Button> : null
         ) : g.hasBankDetails ? (
           <Button size="sm" icon={Send} disabled={!!g.transferBlocked} title={g.transferBlocked ?? undefined} onClick={() => setTransferring(g)}>
             {g.failureReason ? "Try again" : "Transfer"}
@@ -150,15 +161,15 @@ export function CashGiftsCard() {
       <PagedFooter data={data} onPage={setPage} />
       {checkAll.error && <p className="px-5 pb-3 text-sm text-danger-700">{checkAll.error.message}</p>}
       <Modal open={!!checked} onClose={() => setChecked(null)} size="xl" title="Transfers checked with the engine"
-        description={checked ? `${checked.checkedCount} checked · ${checked.paid} now transferred · ${checked.failed} failed · ${checked.checkedCount - checked.paid - checked.failed} still sending or couldn't be checked` : undefined}>
+        description={checked ? `${checked.checkedCount} checked · ${checked.paid} now received by recipient · ${checked.failed} failed · ${checked.checkedCount - checked.paid - checked.failed} still sending or couldn't be checked` : undefined}>
         {checked && (
           <ul className="divide-y divide-ink-100 text-sm">
             {checked.rows.map((r) => (
               <li key={r.id} className="py-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => { setChecked(null); setDetails(r.id); }}>{r.reference}</button>
+                  <button type="button" className="font-semibold text-plum-800 hover:underline" onClick={() => { setChecked(null); open(r.id); }}>{r.reference}</button>
                   <Badge tone={r.error ? "danger" : r.succeeded === true ? "success" : r.succeeded === false ? "danger" : "warning"}>
-                    {r.error ? "Couldn't check" : r.succeeded === true ? "Transferred" : r.succeeded === false ? "Failed" : "Still sending"}
+                    {r.error ? "Couldn't check" : r.succeeded === true ? "Received by recipient" : r.succeeded === false ? "Failed" : "Still sending"}
                   </Badge>
                   {r.status && <Badge tone="neutral">{r.gateway}: {r.status}</Badge>}
                   <span className="ml-auto font-mono text-xs text-ink-500">{r.transferId ?? "no transfer id"}</span>
@@ -170,7 +181,7 @@ export function CashGiftsCard() {
           </ul>
         )}
       </Modal>
-      <TransferDetails id={details} onClose={() => setDetails(null)} onChanged={reload} />
+      <TransferDetails id={details} startMarking={markFirst} onClose={() => setDetails(null)} onChanged={reload} />
       <ConfirmDialog
         open={!!transferring}
         onClose={() => { setTransferring(null); transfer.setError(null); }}
