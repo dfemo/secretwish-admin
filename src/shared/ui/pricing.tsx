@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { CalendarClock, Check, Crown, Receipt, X } from "lucide-react";
 import { api, useApi, useMutation } from "../lib/api";
 import { date, moneyIn } from "../lib/format";
 import { useSession } from "../lib/session";
-import { Badge, ButtonLink, Card, cx, Skeleton } from "./primitives";
+import { Badge, Button, ButtonLink, Card, cx, Skeleton } from "./primitives";
+import { Modal, useToast } from "./overlay";
 
 // Pricing plans as set by admins (api/plans/{audience}). Prices are in USD; each app shows them in its own currency.
 export type PlanFeature = { id: string; text: string };
@@ -254,26 +255,26 @@ export function usePlanSummary(audience: "customer" | "vendor") {
  * The paid plan on a dashboard: which plan, until when (and how many days are left), and the last payment in the currency it was
  * actually charged in. Free plans show a short nudge to compare plans instead.
  */
-export function PlanSummaryCard({ audience, manageHref, className }: { audience: "customer" | "vendor"; manageHref: string; className?: string }) {
+export function PlanSummaryCard({ audience, manageHref, onManage, className }: { audience: "customer" | "vendor"; manageHref?: string; onManage?: () => void; className?: string }) {
   const { data: s, loading } = usePlanSummary(audience);
   if (loading && !s) return <Skeleton className={cx("h-36 rounded-3xl", className)} />;
   if (!s) return null;
   const paid = !s.isFree;
   return (
-    <Card className={cx("overflow-hidden", className)}>
-      <div className={cx("flex flex-wrap items-center gap-4 p-5", paid ? "bg-plum-950 text-ivory-50" : "bg-ivory-50")}>
+    <Card className={cx("@container overflow-hidden", className)}>
+      <div className={cx("flex flex-wrap items-center gap-x-4 gap-y-2 p-4 @md:p-5", paid ? "bg-plum-950 text-ivory-50" : "bg-ivory-50")}>
         <span className={cx("grid size-11 place-items-center rounded-2xl", paid ? "bg-gold-400 text-plum-950" : "bg-plum-100 text-plum-800")}>
           <Crown className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <p className={cx("text-xs font-semibold tracking-wide uppercase", paid ? "text-gold-300" : "text-ink-500")}>{audience === "vendor" ? "Store plan" : "Your plan"}</p>
-          <p className="font-display text-2xl font-semibold">
-            {s.name}{s.period && <span className={cx("ml-2 text-base font-normal", paid ? "text-plum-200" : "text-ink-500")}>billed {s.period === "Yearly" ? "yearly" : "monthly"}</span>}
+          <p className="font-display text-xl font-semibold @md:text-2xl">
+            {s.name}{s.period && <span className={cx("ml-2 inline-block text-sm font-normal @md:text-base", paid ? "text-plum-200" : "text-ink-500")}>billed {s.period === "Yearly" ? "yearly" : "monthly"}</span>}
           </p>
         </div>
         {s.active ? <Badge tone="success">Active</Badge> : s.expired ? <Badge tone="danger">Expired</Badge> : paid ? <Badge tone="neutral">Not paid</Badge> : <Badge tone="neutral">Free</Badge>}
       </div>
-      <div className="grid gap-4 p-5 text-sm sm:grid-cols-2">
+      <div className="grid gap-4 p-4 text-sm @md:p-5 @2xl:grid-cols-2">
         {paid && (
           <div className="flex items-start gap-3">
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-plum-700" aria-hidden />
@@ -292,19 +293,85 @@ export function PlanSummaryCard({ audience, manageHref, className }: { audience:
               <p className="font-semibold text-ink-900">
                 {moneyIn(s.lastPayment.amount, s.lastPayment.currency)} paid in {s.lastPayment.currency}
               </p>
-              <p className="text-xs text-ink-500">
+              <p className="text-xs break-words text-ink-500">
                 {s.lastPayment.plan} · {date(s.lastPayment.paidAt)} with {s.lastPayment.provider}
                 {s.lastPayment.currency !== "USD" && ` · ${moneyIn(s.lastPayment.amountUsd, "USD")} list price`} · ref {s.lastPayment.reference}
               </p>
             </div>
           </div>
         ) : !paid ? (
-          <p className="text-ink-500 sm:col-span-2">{audience === "vendor" ? "Compare plans to grow your store." : "Upgrade for unlimited gifts, surprise requests and more wishlists."}</p>
+          <p className="text-ink-500 @2xl:col-span-2">{audience === "vendor" ? "Compare plans to grow your store." : "Upgrade for unlimited gifts, surprise requests and more wishlists."}</p>
         ) : null}
       </div>
-      <div className="border-t border-ink-100 px-5 py-3">
-        <ButtonLink href={manageHref} size="sm" variant={paid && !s.expired ? "secondary" : "primary"}>{s.expired ? "Renew plan" : paid ? "Manage plan" : "Compare plans"}</ButtonLink>
+      <div className="border-t border-ink-100 px-4 py-3 @md:px-5">
+        {onManage ? (
+          <Button size="sm" variant={paid && !s.expired ? "secondary" : "primary"} onClick={onManage}>{s.expired ? "Renew plan" : paid ? "Manage plan" : "Compare plans"}</Button>
+        ) : (
+          <ButtonLink href={manageHref ?? "#"} size="sm" variant={paid && !s.expired ? "secondary" : "primary"}>{s.expired ? "Renew plan" : paid ? "Manage plan" : "Compare plans"}</ButtonLink>
+        )}
       </div>
     </Card>
+  );
+}
+
+/**
+ * Choosing a plan: the billing toggle and the plan cards, with the right button on each (pay, renew, switch to a free plan, or locked
+ * until the current paid plan ends). A paid plan goes to the payment engine's checkout.
+ */
+export function PlanPicker({ audience, current, intro, next, onSwitched }: { audience: "customer" | "vendor"; current?: string; intro?: ReactNode; next?: string; onSwitched?: () => void }) {
+  const { data: catalog } = useApi<PlanCatalog>(`/plans/${audience}`);
+  const { fmt } = useSession();
+  const toast = useToast();
+  const change = usePlanChoice(audience);
+  const summary = usePlanSummary(audience);
+  const [billing, setBilling] = useState<Billing>("Yearly");
+  // Open on the period the account pays for.
+  useEffect(() => { const b = parsePlanCode(current).billing; if (b) setBilling(b); }, [current]);
+  const blocked = summary.data?.blocked ?? {};
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-[16rem] flex-1 text-sm text-ink-500">{intro ?? "Prices are set in USD and shown in your currency. Paid plans are paid securely with our payment partner."}</div>
+        <BillingToggle value={billing} onChange={setBilling} />
+      </div>
+      {catalog ? (
+        <PricingCards
+          catalog={catalog}
+          billing={billing}
+          format={(usd) => fmt(usd)}
+          current={current}
+          action={(p, { current: isCurrent, code }) => (
+            <PlanButton
+              plan={p}
+              disabled={(isCurrent && p.isFree) || change.pending || !!blocked[code]}
+              title={blocked[code]}
+              onClick={async () => {
+                const r = await change.choose(code, p.isFree, next);
+                if (r?.switched) { toast({ tone: "success", title: `Switched to ${p.name}` }); onSwitched?.(); }
+              }}
+            >
+              {isCurrent ? (p.isFree ? "Your plan" : `Renew ${p.name}`) : blocked[code] ? "Available after your plan ends" : p.isFree ? `Switch to ${p.name}` : `Pay for ${p.name}`}
+            </PlanButton>
+          )}
+        />
+      ) : (
+        <div className="grid gap-5 @2xl:grid-cols-2 @5xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-[420px] rounded-[30px]" />)}</div>
+      )}
+      {change.error && <p role="alert" className="mt-4 text-center text-sm text-danger-700">{change.error.message}</p>}
+    </div>
+  );
+}
+
+/** The plan picker in a dialog (a sheet from the bottom on phones), so pages don't grow with every plan. */
+export function PlansDialog({ open, onClose, audience, current, intro, next, onSwitched }: {
+  open: boolean; onClose: () => void; audience: "customer" | "vendor"; current?: string; intro?: ReactNode; next?: string; onSwitched?: () => void;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} size="2xl" title={audience === "vendor" ? "Store plans" : "Plans"}
+      description="Compare plans and choose the one that suits you.">
+      <div className="@container">
+        <PlanPicker audience={audience} current={current} intro={intro} next={next} onSwitched={() => { onSwitched?.(); onClose(); }} />
+      </div>
+    </Modal>
   );
 }
