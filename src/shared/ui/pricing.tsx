@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, type ComponentProps, type ReactNode } from "react";
-import { Check, X } from "lucide-react";
-import { api, useMutation } from "../lib/api";
+import { CalendarClock, Check, Crown, Receipt, X } from "lucide-react";
+import { api, useApi, useMutation } from "../lib/api";
+import { date, moneyIn } from "../lib/format";
 import { useSession } from "../lib/session";
-import { cx } from "./primitives";
+import { Badge, ButtonLink, Card, cx, Skeleton } from "./primitives";
 
 // Pricing plans as set by admins (api/plans/{audience}). Prices are in USD; each app shows them in its own currency.
 export type PlanFeature = { id: string; text: string };
@@ -152,7 +153,8 @@ function PlanCard({
           )}
         </div>
       </div>
-      <div className={cx("relative flex flex-1 flex-col rounded-tr-[28px] rounded-b-[28px] px-6 pb-7", surface, dark ? "text-ivory-50" : "text-ink-900 backdrop-blur-md")}>
+      {/* Overlaps the tab row by 1px so no hairline shows between them at fractional zoom levels. */}
+      <div className={cx("relative -mt-px flex flex-1 flex-col rounded-tr-[28px] rounded-b-[28px] px-6 pb-7", surface, dark ? "text-ivory-50" : "text-ink-900 backdrop-blur-md")}>
         <h3 className="-mt-4 text-center text-xl font-medium">{plan.name}</h3>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
           {yearly && saving > 0 && (
@@ -235,4 +237,74 @@ export function usePlanChoice(audience: "customer" | "vendor") {
     return { switched: false as const };
   });
   return { choose: m.run, pending: m.pending || leaving, error: m.error };
+}
+
+/** A plan as its dashboard shows it (api/payments/plan). `blocked` lists the plan codes it can't move to until the term ends. */
+export type PlanSummary = {
+  plan: string; name: string; period: Billing | null; isFree: boolean; paidUntil: string | null; active: boolean; expired: boolean; daysLeft: number;
+  lastPayment: { plan: string; currency: string; amount: number; amountUsd: number; provider: string; paidAt: string; reference: string } | null;
+  blocked: Record<string, string>;
+};
+
+export function usePlanSummary(audience: "customer" | "vendor") {
+  return useApi<PlanSummary>(`/payments/plan?audience=${audience}`);
+}
+
+/**
+ * The paid plan on a dashboard: which plan, until when (and how many days are left), and the last payment in the currency it was
+ * actually charged in. Free plans show a short nudge to compare plans instead.
+ */
+export function PlanSummaryCard({ audience, manageHref, className }: { audience: "customer" | "vendor"; manageHref: string; className?: string }) {
+  const { data: s, loading } = usePlanSummary(audience);
+  if (loading && !s) return <Skeleton className={cx("h-36 rounded-3xl", className)} />;
+  if (!s) return null;
+  const paid = !s.isFree;
+  return (
+    <Card className={cx("overflow-hidden", className)}>
+      <div className={cx("flex flex-wrap items-center gap-4 p-5", paid ? "bg-plum-950 text-ivory-50" : "bg-ivory-50")}>
+        <span className={cx("grid size-11 place-items-center rounded-2xl", paid ? "bg-gold-400 text-plum-950" : "bg-plum-100 text-plum-800")}>
+          <Crown className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={cx("text-xs font-semibold tracking-wide uppercase", paid ? "text-gold-300" : "text-ink-500")}>{audience === "vendor" ? "Store plan" : "Your plan"}</p>
+          <p className="font-display text-2xl font-semibold">
+            {s.name}{s.period && <span className={cx("ml-2 text-base font-normal", paid ? "text-plum-200" : "text-ink-500")}>billed {s.period === "Yearly" ? "yearly" : "monthly"}</span>}
+          </p>
+        </div>
+        {s.active ? <Badge tone="success">Active</Badge> : s.expired ? <Badge tone="danger">Expired</Badge> : paid ? <Badge tone="neutral">Not paid</Badge> : <Badge tone="neutral">Free</Badge>}
+      </div>
+      <div className="grid gap-4 p-5 text-sm sm:grid-cols-2">
+        {paid && (
+          <div className="flex items-start gap-3">
+            <CalendarClock className="mt-0.5 size-4 shrink-0 text-plum-700" aria-hidden />
+            <div>
+              <p className="font-semibold text-ink-900">{s.active ? `Active until ${date(s.paidUntil)}` : s.expired ? `Ended on ${date(s.paidUntil)}` : "No payment recorded for this plan"}</p>
+              <p className="text-xs text-ink-500">
+                {s.active ? `${s.daysLeft} ${s.daysLeft === 1 ? "day" : "days"} left. You can renew or upgrade any time; moving to a cheaper plan or Free waits until it ends.` : s.expired ? "Renew to keep your plan's benefits." : "Pay for it to make sure it stays active."}
+              </p>
+            </div>
+          </div>
+        )}
+        {s.lastPayment ? (
+          <div className="flex items-start gap-3">
+            <Receipt className="mt-0.5 size-4 shrink-0 text-plum-700" aria-hidden />
+            <div>
+              <p className="font-semibold text-ink-900">
+                {moneyIn(s.lastPayment.amount, s.lastPayment.currency)} paid in {s.lastPayment.currency}
+              </p>
+              <p className="text-xs text-ink-500">
+                {s.lastPayment.plan} · {date(s.lastPayment.paidAt)} with {s.lastPayment.provider}
+                {s.lastPayment.currency !== "USD" && ` · ${moneyIn(s.lastPayment.amountUsd, "USD")} list price`} · ref {s.lastPayment.reference}
+              </p>
+            </div>
+          </div>
+        ) : !paid ? (
+          <p className="text-ink-500 sm:col-span-2">{audience === "vendor" ? "Compare plans to grow your store." : "Upgrade for unlimited gifts, surprise requests and more wishlists."}</p>
+        ) : null}
+      </div>
+      <div className="border-t border-ink-100 px-5 py-3">
+        <ButtonLink href={manageHref} size="sm" variant={paid && !s.expired ? "secondary" : "primary"}>{s.expired ? "Renew plan" : paid ? "Manage plan" : "Compare plans"}</ButtonLink>
+      </div>
+    </Card>
+  );
 }
