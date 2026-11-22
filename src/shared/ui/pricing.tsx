@@ -1,7 +1,9 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
+import { api, useMutation } from "../lib/api";
+import { useSession } from "../lib/session";
 import { cx } from "./primitives";
 
 // Pricing plans as set by admins (api/plans/{audience}). Prices are in USD; each app shows them in its own currency.
@@ -208,4 +210,28 @@ export function PlanButton({ plan, children, ...rest }: { plan: PricingPlan; chi
       {children}
     </button>
   );
+}
+
+/**
+ * Choosing a plan. A free plan switches straight away; a paid one goes to the default payment engine's checkout (Paystack,
+ * Flutterwave or Stripe) and switches on once the payment is confirmed. `next` is the path to come back to after paying (the
+ * current page if left out). `leaving` stays true while the browser heads to the checkout.
+ */
+export function usePlanChoice(audience: "customer" | "vendor") {
+  const { currency } = useSession();
+  const [leaving, setLeaving] = useState(false);
+  const m = useMutation(async (code: string, free: boolean, next?: string) => {
+    if (free) {
+      await api(audience === "vendor" ? "/vendor/plan" : "/sender/plan", { method: "POST", body: { plan: code } });
+      return { switched: true as const };
+    }
+    const back = next ?? `${window.location.pathname}${window.location.search}`;
+    const r = await api<{ redirectUrl: string | null }>("/payments/plan", { method: "POST", body: { audience, plan: code, currency, next: back } });
+    if (r.redirectUrl) {
+      setLeaving(true);
+      window.location.assign(r.redirectUrl);
+    }
+    return { switched: false as const };
+  });
+  return { choose: m.run, pending: m.pending || leaving, error: m.error };
 }

@@ -81,7 +81,7 @@ export default function PricingAdminPage() {
     <>
       <PageHeader
         title="Pricing & Plans"
-        description="The plans on the website, the Sender app and the vendor portal. Prices are in US dollars and shown to people in their own currency. Billing is simulated until payments go live."
+        description="The plans on the website, the Sender app and the vendor portal. Prices are in US dollars and shown to people in their own currency. Paid plans are paid with the default payment engine (the first one switched on under Settings → Payment engines that takes the payer's currency)."
         actions={editable && (
           <Button icon={Save} disabled={!dirty || problems.length > 0} loading={save.pending}
             onClick={async () => { if (await save.run()) { toast({ tone: "success", title: "Pricing saved", body: "Every pricing page now shows these plans." }); reload(); } }}>
