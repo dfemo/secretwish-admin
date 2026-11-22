@@ -25,6 +25,7 @@ export const areaPermission: Record<string, Permission> = {
   "/deliveries": "orders.view",
   "/requests": "orders.view",
   "/customers": "customers.view",
+  "/birthdays": "customers.view",
   "/vendors": "vendors.view",
   "/products": "products.view",
   "/wishlists": "wishlists.view",

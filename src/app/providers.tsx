@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Banknote, BarChart3, Boxes, Sparkles, CreditCard, Tags, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Inbox, Package, Radar, Radio, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, UsersRound, Warehouse } from "lucide-react";
+import { Banknote, BarChart3, Boxes, Cake, Sparkles, CreditCard, Tags, FileClock, Gift, HandCoins, KeyRound, LayoutDashboard, LifeBuoy, Lock, Inbox, Package, Radar, Radio, RotateCcw, Settings, ShieldCheck, Store, Trophy, Users, UserCog, UsersRound, Warehouse } from "lucide-react";
 import { useApi, type Paged } from "@/shared/lib/api";
 import { SessionProvider } from "@/shared/lib/session";
 import { SidebarShell, type NavSection } from "@/shared/layout/shell";
@@ -18,6 +18,7 @@ const sections: NavSection[] = [
       { href: "/orders", label: "Orders & Fulfilment", icon: Package },
       { href: "/requests", label: "Requests", icon: Sparkles },
       { href: "/customers", label: "Customers & Recipients", icon: Users },
+      { href: "/birthdays", label: "Birthdays", icon: Cake },
       { href: "/vendors", label: "Vendors & Approvals", icon: Store },
       { href: "/products", label: "Products & Categories", icon: Boxes },
       { href: "/wishlists", label: "Wishlists & Campaigns", icon: Gift },
