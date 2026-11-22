@@ -11,7 +11,7 @@ import { useToast } from "@/shared/ui/overlay";
 type KeyName = "testSecretKey" | "testPublicKey" | "testWebhookSecret" | "liveSecretKey" | "livePublicKey" | "liveWebhookSecret";
 type Provider = {
   provider: "Simulated" | "Paystack" | "Flutterwave" | "Stripe";
-  enabled: boolean; mode: "Test" | "Live"; effectiveMode: "Test" | "Live"; currencies: string[]; nigeriaPayouts: boolean; usable: boolean;
+  enabled: boolean; mode: "Test" | "Live"; effectiveMode: "Test" | "Live"; currencies: string[]; nigeriaPayouts: boolean; plansDefault: boolean; usable: boolean;
   updatedAt: string | null; updatedBy: string | null; webhookUrl: string | null;
   /** Never the keys themselves: "••••4f2a" when saved, null when not. */
   keys: Record<KeyName, string | null> | null;
@@ -95,12 +95,13 @@ function ProviderCard({ p, data, onSaved }: { p: Provider; data: Data; onSaved: 
   const [mode, setMode] = useState(p.mode);
   const [currencies, setCurrencies] = useState(p.currencies.join(", "));
   const [payouts, setPayouts] = useState(p.nigeriaPayouts);
+  const [plans, setPlans] = useState(p.plansDefault);
   const [keys, setKeys] = useState<Partial<Record<KeyName, string>>>({});
   const [clear, setClear] = useState<KeyName[]>([]);
   const [check, setCheck] = useState<{ ok: boolean; message: string } | null>(null);
-  useEffect(() => { setEnabled(p.enabled); setMode(p.mode); setCurrencies(p.currencies.join(", ")); setPayouts(p.nigeriaPayouts); setKeys({}); setClear([]); }, [p]);
+  useEffect(() => { setEnabled(p.enabled); setMode(p.mode); setCurrencies(p.currencies.join(", ")); setPayouts(p.nigeriaPayouts); setPlans(p.plansDefault); setKeys({}); setClear([]); }, [p]);
   const save = useMutation(() =>
-    api(`/payments/admin/providers/${p.provider}`, { method: "PUT", body: { enabled, mode, currencies, nigeriaPayouts: payouts, keys, clear } }));
+    api(`/payments/admin/providers/${p.provider}`, { method: "PUT", body: { enabled, mode, currencies, nigeriaPayouts: payouts, plansDefault: plans, keys, clear } }));
   const test = useMutation(() => api<{ ok: boolean; message: string }>(`/payments/admin/providers/${p.provider}/check`, { method: "POST" }));
   const fieldError = (k: string) => (save.error instanceof ApiError ? save.error.errors?.[k]?.[0] : undefined);
   const h = help[p.provider];
@@ -130,6 +131,7 @@ function ProviderCard({ p, data, onSaved }: { p: Provider; data: Data; onSaved: 
         <h3 id={`pe-${p.provider}`} className="text-base font-semibold text-ink-900">{simulated ? "Simulated (no real money)" : p.provider}</h3>
         {p.usable ? <Badge tone="success">On · {p.effectiveMode === "Live" ? "live" : "test"}</Badge> : <Badge>Off</Badge>}
         {p.nigeriaPayouts && <Badge tone="gold">Pays Nigerian banks</Badge>}
+        {p.plansDefault && <Badge tone="plum">Takes plan payments</Badge>}
         {p.updatedBy && <span className="ml-auto text-xs text-ink-400">Changed by {p.updatedBy}</span>}
       </div>
       {simulated ? (
@@ -172,11 +174,12 @@ function ProviderCard({ p, data, onSaved }: { p: Provider; data: Data; onSaved: 
             )}
           </div>
           {fieldError("keys") && <Notice tone="danger" className="mt-3">{fieldError("keys")}</Notice>}
-          {h.payouts && (
-            <div className="mt-4 max-w-xl">
+          <div className="mt-4 grid max-w-xl gap-3">
+            <Switch label="Use for plan payments" description="Senders' and stores' subscription plans. Only one engine at a time; with none chosen, plans use the first engine that's on and takes the payer's currency." checked={plans} onChange={setPlans} />
+            {h.payouts && (
               <Switch label="Use for payouts to Nigerian banks" description="Vendor payouts and recipients' cash gifts. Only one engine at a time." checked={payouts} onChange={setPayouts} />
-            </div>
-          )}
+            )}
+          </div>
           {p.webhookUrl && (
             <div className="mt-4 rounded-xl bg-ink-50 p-3 text-xs">
               <p className="font-semibold text-ink-700">Webhook URL (paste into the {p.provider} dashboard)</p>
