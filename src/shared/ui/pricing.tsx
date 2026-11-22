@@ -137,10 +137,11 @@ function PlanCard({
           : "shadow-[0_1px_2px_rgb(43_23_54/0.04),0_16px_40px_rgb(43_23_54/0.07)]",
       )}
     >
-      {/* Folder tab: the card's left part rises; the label sits in the notch on the right. */}
+      {/* Folder tab: the card's left part rises; the label sits in the notch on the right. The tab's top-right corner (18px) and the
+          curve down into the notch (22px) add up to the tab's 40px height, so they meet in one smooth S with no step between them. */}
       <div className="flex h-10">
-        <div className={cx("relative flex-1 rounded-t-[28px]", surface, !dark && "backdrop-blur-md")}>
-          <span aria-hidden className="absolute -right-7 bottom-0 size-7" style={{ background: `radial-gradient(circle at 100% 0, transparent 27px, ${fillet} 28px)` }} />
+        <div className={cx("relative flex-1 rounded-tl-[28px] rounded-tr-[18px]", surface, !dark && "backdrop-blur-md")}>
+          <span aria-hidden className="absolute -right-[22px] bottom-0 size-[22px]" style={{ background: `radial-gradient(circle at 100% 0, transparent 21.5px, ${fillet} 22px)` }} />
         </div>
         <div className="flex w-[38%] items-center justify-center pl-6">
           {tab && (

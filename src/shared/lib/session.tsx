@@ -61,6 +61,8 @@ type Session = {
   fmtIn: (usd: number | null | undefined, currency: Currency, opts?: { compact?: boolean }) => string;
   /** Units of `currency` per US dollar. */
   rate: (currency: Currency) => number;
+  /** Loads the signed-in profile again (after saving details such as the date of birth). */
+  reloadProfile: () => Promise<void>;
 };
 
 const Ctx = createContext<Session | null>(null);
@@ -338,9 +340,10 @@ export function SessionProvider({ app, children, intro }: { app: AppName; childr
             fmt: (usd, opts) => money(usd, currency, rateOf(meta, currency), opts),
             fmtIn: (usd, code, opts) => money(usd, code, rateOf(meta, code), opts),
             rate: (code) => rateOf(meta, code),
+            reloadProfile: loadProfile,
           }
         : null,
-    [app, persona, state, signOut, currency, setCurrency, meta],
+    [app, persona, state, signOut, currency, setCurrency, meta, loadProfile],
   );
 
   if (state.status === "loading") return <Spinner label={`Opening ${BRAND}`} />;
